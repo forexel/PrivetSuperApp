@@ -1,0 +1,26 @@
+
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.DS_Store
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# Editors/IDE
+.vscode/
+.idea/
+
+# Environment files (keep example)
+.env
+*.env
+.env.*
+!.env.example
+
+# Alembic cache
+alembic/versions/__pycache__/

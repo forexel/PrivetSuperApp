@@ -1,0 +1,258 @@
+# ТЗ: Бэкенд «Privet SuperApp» (v1)
+
+Этот документ описывает требования к серверной части приложения. По итогам реализации должен быть доступен набор REST-методов, покрывающий весь функционал из пользовательских сценариев ниже.
+
+## 1. Цели и охват
+- Аутентификация по телефону и паролю, выпуск пары JWT (access/refresh).
+- Личный профиль пользователя (состояния «призрак» / «с подпиской»), смена пароля, выход, удаление аккаунта.
+- «Моя техника»: список устройств пользователя, карточка устройства, детали (модель, серийник, покупка, подписка/гарантия).
+- Заявки на ремонт: создание, история, детали, статусы, вложения.
+- Поддержка: обращение в техподдержку, подтверждение отправки, FAQ/База знаний, «О приложении»/контакты.
+- Внутренний админ-интерфейс: CRUD устройств, привязка к пользователю.
+
+## 2. Термины и роли
+- **Пользователь** — владелец учётной записи, действует в приложении после логина.
+- **Сотрудник (админ‑интерфейс)** — оператор внутренней панели. В рамках v1 отдельные роли в БД не вводим, доступ ограничивается самим админ‑интерфейсом.
+- **Подписка** — флаг/параметры, влияющие на состояние профиля ("призрак" = нет подписки).
+
+## 3. Нефункциональные требования
+- Язык API: JSON/HTTP, кодировка UTF‑8.
+- Авторизация: HTTP Bearer с `access_token`.
+- Время жизни токенов: access ≈ 15 мин, refresh ≈ 30 дней (параметризуемо).
+- Хранение refresh‑сессий в БД (revocation по `jti`).
+- Логирование запросов и ошибок; CORS для фронтенда.
+- Версионирование префиксом `/api/v1`.
+- Документация Swagger/OpenAPI 3.1, единая security‑схема `HTTPBearer`.
+
+## 4. Архитектура (высокоуровнево)
+- FastAPI + SQLAlchemy + Alembic + PostgreSQL.
+- Слои: `routers` (API) → `services` (бизнес-логика) → `repos/models` (доступ к данным).
+- Утилиты: хеширование паролей (argon2/bcrypt), JWT (HS256/HS512), валидация схем Pydantic.
+
+## 5. Схема данных (минимально необходимое)
+**users**
+- `id UUID PK`
+- `phone VARCHAR UNIQUE`
+- `email VARCHAR UNIQUE NULLABLE`
+- `password_hash VARCHAR`
+- `name VARCHAR`
+- `status ENUM('ACTIVE','BLOCKED','DELETED')` (по умолчанию `ACTIVE`)
+- `has_subscription BOOLEAN DEFAULT false` (состояние «с подпиской»)
+- `deleted_at TIMESTAMPTZ NULL`
+- `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`
+
+**sessions** (refresh‑сессии)
+- `id UUID PK`
+- `user_id UUID FK users`
+- `refresh_jti UUID UNIQUE`
+- `expires_at TIMESTAMPTZ`
+- `user_agent TEXT NULL`, `ip INET NULL`
+- `revoked BOOLEAN DEFAULT false`
+- `created_at TIMESTAMPTZ`
+
+**devices**
+- `id UUID PK`
+- `user_id UUID FK users NULL` (допускается «не назначено»)
+- `title, brand, model, serial_number VARCHAR`
+- `purchase_date DATE NULL`, `warranty_until DATE NULL`
+- `created_at TIMESTAMPTZ`
+
+**device_photos**
+- `id UUID PK`, `device_id UUID FK devices`, `file_url TEXT`, `created_at`
+
+**tickets**
+- `id UUID PK`
+- `user_id UUID FK users`
+- `device_id UUID FK devices`
+- `title VARCHAR`, `description TEXT`
+- `preferred_date DATE NULL`
+- `status ENUM('accepted','in_progress','done','rejected') DEFAULT 'accepted'`
+- `created_at`, `updated_at`
+
+**ticket_attachments**
+- `id UUID PK`, `ticket_id UUID FK tickets`, `file_url TEXT`, `created_at`
+
+**ticket_status_history**
+- `id UUID PK`, `ticket_id UUID FK tickets`
+- `from_status ENUM(...) NULL`, `to_status ENUM(...)`
+- `changed_by ENUM('USER','STAFF','SYSTEM')`
+- `comment TEXT NULL`, `created_at`
+
+**support_requests**
+- `id UUID PK`, `user_id UUID FK users`
+- `subject VARCHAR`, `message TEXT`, `file_url TEXT NULL`, `created_at`
+
+**faq_categories**
+- `id UUID PK`, `slug VARCHAR UNIQUE`, `title VARCHAR`
+
+**faq_articles**
+- `id UUID PK`, `category_id UUID FK faq_categories`, `title VARCHAR`, `content TEXT`, `keywords TEXT[]`, `created_at`
+
+## 6. Миграции Alembic
+- `0001_init`: users, sessions (+enum user_status_t).
+- `0002_devices`: devices, device_photos.
+- `0003_tickets`: tickets, ticket_attachments, ticket_status_history (+enum ticket_status_t, changed_by_t).
+- `0004_support_faq`: support_requests, faq_categories, faq_articles.
+
+## 7. Аутентификация
+- Пароли хешируются (argon2/bcrypt). Логин по **телефону** и паролю.
+- JWT содержит: `sub=user_id`, `typ` = `access|refresh`, `exp`.
+- Refresh‑сессии сохраняются в таблице `sessions` (по `refresh_jti`). Logout — ревокация.
+
+### Обработчики ошибок
+- `401` — невалидный/отсутствующий токен.
+- `403` — доступ запрещён (не владелец ресурса).
+- `404` — ресурс не найден.
+- `409` — конфликт (дубликаты и т.п.).
+- `422` — валидация.
+- `500` — внутренняя ошибка.
+
+## 8. Спецификация REST‑методов
+Базовый префикс: `/api/v1`.
+
+### 8.1 Health
+- `GET /ping/` → `{"status":"ok"}`
+- `GET /ping/healthz` → `{"app":"ok"}`
+
+### 8.2 Auth
+- `POST /auth/register` — регистрация по телефону и паролю
+  - **Body:** `{ phone, password, name?, email? }`
+  - **201 →** `{ id, phone, name, has_subscription }`
+
+- `POST /auth/login` — вход
+  - **Body:** `{ phone, password }`
+  - **200 →** `{ access_token, refresh_token, token_type:"bearer" }`
+
+- `POST /auth/refresh` — обновление пары токенов
+  - **Body:** `{ refresh_token }`
+  - **200 →** `{ access_token, refresh_token, token_type:"bearer" }`
+
+- `POST /auth/logout` — выход (ревокация refresh)
+  - **Body:** `{ refresh_token }`
+  - **200 →** `{ success:true }`
+
+### 8.3 Профиль
+- `GET /me` (Bearer)
+  - **200 →** `{ id, phone, name, email, has_subscription, status }`
+
+- `PATCH /me/password` (Bearer) — смена пароля
+  - **Body:** `{ old_password, new_password }`
+  - **200 →** `{ success:true }`
+
+- `DELETE /me` (Bearer) — удаление аккаунта (soft‑delete)
+  - **200 →** `{ success:true }`
+
+- `PATCH /me` (Bearer) — обновление профиля
+  - **Body:** `{ name?, email? }`
+  - **200 →** `{ success:true }`
+
+### 8.4 Моя техника (клиент)
+- `GET /devices/my` (Bearer) — список устройств пользователя
+  - **200 →** `[{ id, title, brand, model, serial_number, purchase_date, warranty_until }]`
+
+- `GET /devices/{id}` (Bearer) — детали устройства пользователя
+  - **200 →** `{ id, title, brand, model, serial_number, purchase_date, warranty_until, photos:[...] }`
+
+### 8.5 Устройства (админ‑интерфейс)
+- `POST /devices` — создать устройство (в т.ч. назначить `user_id`)
+  - **Body:** `{ title, brand, model, serial_number, purchase_date?, warranty_until?, user_id? }`
+
+- `PATCH /devices/{id}` — изменить
+- `DELETE /devices/{id}` — удалить
+- `POST /devices/{id}/photos` — добавить фото `{ file_url }`
+
+*(Авторизация админ‑панели — вне публичного API; доступ ограничен интерфейсом.)*
+
+### 8.6 Заявки (клиент)
+- `GET /tickets/` (Bearer) — мои заявки
+  - **200 →** `[{ id, title, status, created_at }]`
+
+- `POST /tickets/` (Bearer) — создать заявку
+  - **Body:** `{ device_id, title, description, preferred_date?, attachments?:[{file_url}] }`
+  - Создаёт ticket со статусом `accepted`; при наличии `attachments` — записи в `ticket_attachments`.
+
+- `GET /tickets/{id}` (Bearer) — детали моей заявки
+  - **200 →** `{ id, device_id, title, description, status, attachments:[...], history:[...] }`
+
+- `PATCH /tickets/{id}` (Bearer) — обновление заявки
+  - **Body:** `{ title?, description?, preferred_date? }`
+  - **200 →** `{ success:true }`
+
+### 8.7 Статусы заявок (админ‑интерфейс)
+- `PATCH /tickets/{id}/status` — смена статуса
+  - **Body:** `{ to_status, comment? }` → запись в `ticket_status_history` (`changed_by='STAFF'`).
+
+### 8.8 Поддержка
+- `POST /support/requests` (Bearer) — отправить обращение
+  - **Body:** `{ subject, message, file_url? }`
+  - **200 →** `{ success:true, request_id }`
+
+- **Экран подтверждения** — фронтенд показывает после `200`.
+
+### 8.9 FAQ / База знаний (публично)
+- `GET /faq/categories` → `[{ id, slug, title }]`
+- `GET /faq/categories/{slug}/articles` → `[{ id, title, keywords }]`
+- `GET /faq/articles/{id}` → `{ id, title, content, keywords }`
+- `GET /faq/search?q=...` → поиск по `title/content/keywords`
+
+### 8.10 О приложении / Контакты (публично)
+- `GET /about` → `{ version, terms_url, privacy_url }`
+- `GET /contacts` → `{ phone, email, site }`
+
+## 9. Безопасность и права доступа
+- Все эндпоинты, где требуется пользовательский контекст, защищены `HTTPBearer` + `get_current_user`.
+- Пользователь имеет доступ только к собственным устройствам и заявкам.
+- Админ‑CRUD для устройств и смены статусов доступен через отдельный внутренний интерфейс.
+
+## 10. Валидация и ограничения
+- Телефон: E.164, уникален.
+- Пароль: минимум 8 символов.
+- `serial_number` уникален по устройствам.
+- Ограничение на число вложений в тикете (например, ≤10, до 10 МБ URL/файл‑ссылка).
+
+## 11. Коды ответов
+- `200/201` — успех
+- `204` — без тела
+- `400/422` — валидация
+- `401/403` — аутентификация/доступ
+- `404` — не найдено
+- `409` — конфликт
+- `500` — внутренняя ошибка
+
+## 12. Замечания по Swagger/OpenAPI
+- Единая security-схема `HTTPBearer`.
+- Все защищённые маршруты имеют `security: [HTTPBearer]`.
+- Примеры запросов/ответов — для ключевых методов.
+
+---
+
+### Итог
+Реализация данного ТЗ должна дать полный список методов для приложения: авторизация (телефон+пароль), профиль (состояния и операции), устройства (мои + админ CRUD), заявки (создание/история/детали/статусы), поддержка (запросы), FAQ/статические разделы, а также health‑проверки и корректную OpenAPI‑схему.
+
+# API Спецификация v1
+
+## Аутентификация
+- POST /api/v1/auth/register - Регистрация
+- POST /api/v1/auth/login - Вход по телефону/паролю
+- POST /api/v1/auth/refresh - Обновление токенов
+- POST /api/v1/auth/logout - Выход (ревокация refresh token)
+
+## Профиль
+- GET /api/v1/me - Данные текущего пользователя
+- PATCH /api/v1/me - Обновление профиля
+
+## Устройства
+- GET /api/v1/devices/my - Список устройств пользователя
+- GET /api/v1/devices/{id} - Получение устройства
+- POST /api/v1/devices - Создание устройства (админ)
+
+## Заявки
+- GET /api/v1/tickets/ - История заявок пользователя
+- POST /api/v1/tickets/ - Создание заявки
+- GET /api/v1/tickets/{id} - Получение заявки
+- PATCH /api/v1/tickets/{id} - Обновление заявки
+
+## Поддержка и FAQ
+- GET /api/v1/faq/categories - Категории FAQ
+- GET /api/v1/faq/articles - Статьи FAQ
+- POST /api/v1/support/requests - Создание обращения

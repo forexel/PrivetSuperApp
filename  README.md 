@@ -1,0 +1,209 @@
+
+
+# PrivetSuperApp API
+
+FastAPI backend with users/auth, devices, and tickets. Swagger UI available at `/docs`.
+
+---
+
+## ✨ Features
+- **Auth & Users**: register, login (JWT), change password, delete, profile (`/api/v1/auth/*`, `/api/v1/user/*`).
+- **Devices**: create, update, get by id, search, my devices.
+  - Lists return minimal objects `{id, title}` where appropriate; details endpoint returns full object.
+- **Tickets**: create, list my tickets, get by id, update, update status.
+- **Admin**: ping, login.
+- **Default**: ping, info.
+
+---
+
+## 🧰 Requirements
+- Python 3.12+
+- PostgreSQL 14+
+- pip / virtualenv (or pyenv)
+
+---
+
+## 🚀 Quickstart (Local)
+
+### 1) Clone & enter
+```bash
+cd /Users/d.yudin/PrivetSuperApp
+```
+
+### 2) Create virtualenv & install
+```bash
+cd server
+python -m venv .venv
+# Windows:
+# .venv\Scripts\activate
+# macOS/Linux:
+source .venv/bin/activate
+
+pip install -U pip
+pip install -r requirements.txt
+```
+
+### 3) Environment
+Backend reads **server/.env** (explicit path). Create it if missing:
+```
+APP_NAME=PrivetSuperApp API
+ENV=dev
+SECRET_KEY=<random_64+_chars>
+ACCESS_TOKEN_EXPIRE_MINUTES=60
+CORS_ALLOW_ORIGINS=http://localhost:8000,http://127.0.0.1:8000
+DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost:5432/privetdb
+```
+> Note: Keep only `KEY=VALUE` lines. No quotes needed. One per line.
+
+### 4) Database & migrations
+```bash
+alembic upgrade head
+```
+
+### 5) Run the API
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+Open: `http://127.0.0.1:8000/docs`
+
+---
+
+## 🔑 Swagger authorization
+1. `POST /api/v1/auth/register` (if needed) → create user.
+2. `POST /api/v1/auth/login` → get `access_token`.
+3. Click **Authorize** (top-right) → choose **bearerAuth** → paste token → **Authorize**.
+4. Now protected endpoints (e.g. `/api/v1/tickets/`) return 200 instead of 401.
+
+> The login call itself does **not** auto-authenticate Swagger — you must press **Authorize**.
+
+---
+
+## 📦 Devices API (examples)
+
+### Create (no auth; requires explicit `user_id`)
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/devices" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "<uuid-of-user>",
+    "title": "iPhone 14",
+    "brand": "Apple",
+    "model": "A2882",
+    "serial_number": "SN123456",
+    "purchase_date": "2024-08-01"
+  }'
+```
+
+### Get by ID (no auth)
+```bash
+curl http://127.0.0.1:8000/api/v1/devices/<device_uuid>
+```
+
+### Search (no auth; returns list of `{id, title}`)
+```bash
+curl "http://127.0.0.1:8000/api/v1/devices/search?title=iphone"
+```
+
+### My devices (auth; returns list of `{id, title}`)
+```bash
+# After Authorize in Swagger or token in header
+curl -H "Authorization: Bearer <token>" \
+  http://127.0.0.1:8000/api/v1/devices/my
+```
+
+---
+
+## 🎫 Tickets API (examples)
+
+### Create (auth)
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/tickets/" \
+  -H "Authorization: Bearer <token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Не работает лифт",
+    "description": "Подъезд 3, этаж 7",
+    "preferred_date": "2025-09-01"
+  }'
+```
+
+### List my tickets (auth)
+```bash
+curl -H "Authorization: Bearer <token>" \
+  http://127.0.0.1:8000/api/v1/tickets/
+```
+
+---
+
+## 🌐 Expose to Internet (options)
+
+### A) Quick demo: Cloudflare Tunnel
+```bash
+# install cloudflared, login
+cloudflared tunnel --url http://localhost:8000
+```
+It prints a public HTTPS URL → share it.
+
+### B) Quick demo: ngrok
+```bash
+ngrok http 8000
+```
+
+### C) Proper HTTPS on Linux: Caddy + systemd
+1) Put code on server (e.g. `/opt/privet-api`), create `/opt/privet-api/.env` (see above), venv, `pip install -r requirements.txt`, `alembic upgrade head`.
+2) `deploy/privet-api.service` → `/etc/systemd/system/`:
+```bash
+sudo systemctl daemon-reload
+sudo systemctl enable --now privet-api
+```
+3) Install Caddy; set `deploy/Caddyfile`:
+```
+api.yourdomain.com {
+    encode gzip
+    reverse_proxy 127.0.0.1:8000
+}
+```
+```bash
+sudo systemctl reload caddy
+```
+Open `https://api.yourdomain.com/docs`.
+
+> On **Windows**: there is no systemd. Run `uvicorn` in PowerShell or use NSSM to create a Windows service. Caddy has a Windows build — same Caddyfile works.
+
+---
+
+## 🔒 Production checklist
+- Strong `SECRET_KEY`.
+- CORS restricted to your frontend domain(s).
+- HTTPS via Caddy/Cloudflare.
+- DB backups & migrations in CI/CD.
+- Choose password backend (`argon2-cffi` or `bcrypt`) and ensure corresponding package installed.
+
+---
+
+## 🛠 Troubleshooting
+- **422 phone**: phone must match E.164 `+<country><number>` (11–15 digits).
+- **bcrypt MissingBackendError**: install `bcrypt>=4` or switch to `argon2-cffi` in `core/security.py`.
+- **greenlet required**: `pip install greenlet>=3`.
+- **dotenv parse errors**: `.env` must contain only `KEY=VALUE` lines. Backend uses `server/.env` explicitly.
+- **`from __future__ import annotations`** must be the **first line** in `app/main.py`.
+- **Swagger not authorized**: press **Authorize** and paste the bearer token.
+
+---
+
+## 🧪 Developer commands
+```bash
+# venv
+python -m venv .venv
+source .venv/bin/activate
+
+# install
+pip install -r requirements.txt
+
+# migrations
+alembic upgrade head
+alembic revision -m "message"  # generate a new migration
+
+# run
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
