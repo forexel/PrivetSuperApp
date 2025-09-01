@@ -127,14 +127,26 @@
 /* Round icon buttons and color overrides */
 .icon-round {
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
+  aspect-ratio: 1 / 1;
 }
-.info-edit.icon-round { padding: 0; }
+.info-edit.icon-round {
+  padding: 0;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50% !important;
+  aspect-ratio: 1 / 1;
+}
 .icon-round.accept {
   background: #e6f7ed; /* light green bg */
 }
@@ -153,3 +165,5 @@
   fill: #dc2626; /* red-600 */
   stroke: #dc2626;
 }
+/* smaller icon glyphs */
+.info-edit.icon-round svg { width: 14px; height: 14px; }

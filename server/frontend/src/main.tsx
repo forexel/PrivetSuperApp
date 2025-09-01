@@ -18,6 +18,7 @@ import SupportDetailPage from './modules/support/SupportDetailPage'
 import SupportCreatePage from './modules/support/SupportCreatePage'
 import SupportSuccessPage from './modules/support/SupportSuccessPage'
 import { ProfilePage } from './modules/profile/ProfilePage'
+import ProfileDeletePage from './modules/profile/ProfileDeletePage'
 import { DevicesListPage } from './modules/devices/DevicesListPage'
 import './index.css'
 import './styles/style.css'
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
       { path: 'support/success', element: <SupportSuccessPage /> }, // успех
       { path: 'support/:id', element: <SupportDetailPage /> },   // подробности
       { path: 'profile', element: <ProfilePage /> }, 
+      { path: 'profile/delete', element: <ProfileDeletePage /> },
     ],
   },
   { path: '*', element: <Navigate to="/" replace /> },

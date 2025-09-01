@@ -86,7 +86,7 @@ export function HomePage() {
       </div>
 
         <div className="summary-card">
-          <div className="title">Моя техника</div>
+          <div className="title" style={{ marginBottom: 2 }}>Моя техника</div>
           <div className="meta">{devicesMeta}</div>
         </div>
 
