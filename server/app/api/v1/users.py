@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from typing import Annotated
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 
 from app.core.deps import get_current_user
 from app.core.database import get_db
@@ -29,6 +30,7 @@ async def register(
             password=payload.password,
             name=payload.name,
             email=payload.email,
+            address=payload.address,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
@@ -91,3 +93,24 @@ async def delete_me(
     service = UserService(db)
     await service.delete(current_user)
     return None
+
+
+# 6 Update current user profile
+class UpdateUserRequest(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    address: str | None = None
+
+
+@router.put("", response_model=UserResponse)
+async def update_me(
+    payload: UpdateUserRequest,
+    current_user: Annotated[object, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    service = UserService(db)
+    try:
+        user = await service.update(current_user, **payload.model_dump(exclude_unset=True))
+        return user
+    except IntegrityError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already exists")

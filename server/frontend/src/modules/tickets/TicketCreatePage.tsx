@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../../shared/api'
 import '../../styles/forms.css'
-import { CloseFloating } from '../../shared/ui/CloseFloating'
+// import { CloseFloating } from '../../shared/ui/CloseFloating'
 
 const schema = z.object({
   title: z.string().min(1, 'Укажите тему'),
@@ -57,10 +57,8 @@ export function TicketCreatePage() {
   }
 
   return (
-    <div className="page-blue">
-      <CloseFloating onClick={() => navigate(-1)} />
-
-      <div className="card auth-card">
+    <div className="dashboard">
+      <div className="card auth-card" style={{ marginInline: 'auto' }}>
         <h2 className="card-title">Оформление заявки</h2>
 
         <form className="form ticket-form" onSubmit={handleSubmit(onSubmit)}>

@@ -7,6 +7,7 @@ class UserBase(BaseModel):
     phone: str = Field(..., pattern=r'^\d{10}$', description="10 digits only, no +7/8")
     email: Optional[EmailStr] = None
     name: Optional[str] = None
+    address: Optional[str] = None
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8)

@@ -123,3 +123,33 @@
   fill: #3E8BBF;
   stroke: #3E8BBF;
 }
+
+/* Round icon buttons and color overrides */
+.icon-round {
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.info-edit.icon-round { padding: 0; }
+.icon-round.accept {
+  background: #e6f7ed; /* light green bg */
+}
+.icon-round.cancel {
+  background: #fdecec; /* light red bg */
+}
+
+/* Override default blue color for accept/cancel icons */
+.info-edit.icon-round.accept svg,
+.info-edit.icon-round.accept svg * {
+  fill: #16a34a; /* green-600 */
+  stroke: #16a34a;
+}
+.info-edit.icon-round.cancel svg,
+.info-edit.icon-round.cancel svg * {
+  fill: #dc2626; /* red-600 */
+  stroke: #dc2626;
+}
