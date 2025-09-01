@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 // ⚠️ Проверь путь к твоему axios-инстансу:
 import { api } from '../../shared/api'
+import { PLAN_TITLES, PERIOD_TITLES } from '../../shared/subscriptions'
 import '../../styles/dashboard.css'
 
 type Ticket = {
@@ -39,7 +40,7 @@ export function HomePage() {
   // 2) активная подписка из /subscriptions/active
   const { data: activeSub } = useQuery({
     queryKey: ['active-subscription'],
-    queryFn: () => api.get<{ plan?: string|null; period?: string|null; ends_at?: string|null }>('/api/v1/subscriptions/active'),
+    queryFn: () => api.get<{ plan?: string|null; period?: string|null; paid_until?: string|null }>('/api/v1/subscriptions/active'),
   });
 
   // 3) мой адрес
@@ -76,13 +77,13 @@ export function HomePage() {
           <div className="title">Тариф</div>
           <div className="meta">
             {activeSub?.plan
-              ? `Тариф: ${activeSub.plan} • ${activeSub.period === 'year' ? 'годовая' : 'месячная'}`
+              ? `Тариф: ${PLAN_TITLES[activeSub.plan as keyof typeof PLAN_TITLES] ?? activeSub.plan} • ${activeSub.period ? (PERIOD_TITLES[activeSub.period as keyof typeof PERIOD_TITLES] ?? activeSub.period) : ''}`
               : 'Нет активной подписки'}
           </div>
-          {activeSub?.ends_at && (
-            <div className="meta">Активна до: {new Date(activeSub.ends_at).toLocaleDateString('ru-RU')}</div>
+          {activeSub?.paid_until && (
+            <div className="meta">Активна до: {new Date(activeSub.paid_until as any).toLocaleDateString('ru-RU')}</div>
           )}
-        </div>
+      </div>
 
         <div className="summary-card">
           <div className="title">Моя техника</div>
