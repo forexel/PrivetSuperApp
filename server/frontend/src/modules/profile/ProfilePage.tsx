@@ -6,7 +6,7 @@ import { PLAN_TITLES } from '../../shared/subscriptions'
 import AvatarIcon from '../../assets/profile/avatar.svg'
 import PencilIcon from '../../assets/icons/pencil.svg?react'
 import AcceptIcon from '../../assets/icons/accept.svg?react'
-import CancelIcon from '../../assets/icons/cancel.svg?react'
+import CancelIcon from '../../assets/icons/cross.svg?react'
 import '../../styles/profile.css'
 
 export function ProfilePage() {
@@ -31,6 +31,23 @@ export function ProfilePage() {
   const [nameValue, setNameValue] = useState('')
   const [editEmail, setEditEmail] = useState(false)
   const [emailValue, setEmailValue] = useState('')
+  const [editPwd, setEditPwd] = useState(false)
+  const [oldPwd, setOldPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [pwdError, setPwdError] = useState<string>('')
+
+  // Отвечает за то, чтобы в один момент редактировался только один блок
+  const openEdit = (section: 'name' | 'email' | 'pwd') => {
+    setEditName(section === 'name')
+    setEditEmail(section === 'email')
+    setEditPwd(section === 'pwd')
+    // Сброс временных значений и ошибок из других блоков
+    setNameValue((me?.name || '').trim())
+    setEmailValue((me?.email || '').trim())
+    setOldPwd('')
+    setNewPwd('')
+    setPwdError('')
+  }
 
   useEffect(() => {
     if (me) {
@@ -50,6 +67,22 @@ export function ProfilePage() {
       qc.invalidateQueries({ queryKey: ['me'] })
       setEditName(false)
       setEditEmail(false)
+    },
+  })
+
+  const pwdMutation = useMutation({
+    mutationFn: async (payload: { old_password: string; new_password: string }) => {
+      setPwdError('')
+      return api.post<null>('/api/v1/user/change-password', payload as any)
+    },
+    onSuccess: () => {
+      setEditPwd(false)
+      setOldPwd('')
+      setNewPwd('')
+    },
+    onError: (e: any) => {
+      const msg = e?.status === 400 ? 'Старый пароль неверный' : 'Не удалось сменить пароль'
+      setPwdError(msg)
     },
   })
 
@@ -76,7 +109,7 @@ export function ProfilePage() {
       <div className="info-list">
         <div className="info-item">
           <div className="text" style={{ flex: 1 }}>
-            <div className="info-title">Имя/Фамилия</div>
+            <div className="info-title">Имя Фамилия</div>
             {!editName ? (
               <div className="info-subtitle">{me?.name || '—'}</div>
             ) : (
@@ -89,7 +122,7 @@ export function ProfilePage() {
                   onClick={() => mutation.mutate({ name: nameValue })}
                   disabled={mutation.isPending}
                 >
-                  <AcceptIcon className="pencil-icon" />
+                  <AcceptIcon />
                 </button>
                 <button
                   className="info-edit icon-round cancel"
@@ -97,13 +130,13 @@ export function ProfilePage() {
                   aria-label="Отмена"
                   onClick={() => { setEditName(false); setNameValue(me?.name || '') }}
                 >
-                  <CancelIcon className="pencil-icon" />
+                  <CancelIcon />
                 </button>
               </div>
             )}
           </div>
           {!editName && (
-            <button className="info-edit" aria-label="Редактировать имя" onClick={() => setEditName(true)}>
+            <button className="info-edit" aria-label="Редактировать имя" onClick={() => openEdit('name')}>
               <PencilIcon className="pencil-icon" />
             </button>
           )}
@@ -131,7 +164,7 @@ export function ProfilePage() {
                   onClick={() => mutation.mutate({ email: emailValue })}
                   disabled={mutation.isPending}
                 >
-                  <AcceptIcon className="pencil-icon" />
+                  <AcceptIcon />
                 </button>
                 <button
                   className="info-edit icon-round cancel"
@@ -139,13 +172,65 @@ export function ProfilePage() {
                   aria-label="Отмена"
                   onClick={() => { setEditEmail(false); setEmailValue(me?.email || '') }}
                 >
-                  <CancelIcon className="pencil-icon" />
+                  <CancelIcon />
                 </button>
               </div>
             )}
           </div>
           {!editEmail && (
-            <button className="info-edit" aria-label="Редактировать email" onClick={() => setEditEmail(true)}>
+            <button className="info-edit" aria-label="Редактировать email" onClick={() => openEdit('email')}>
+              <PencilIcon className="pencil-icon" />
+            </button>
+          )}
+        </div>
+
+        {/* Смена пароля */}
+        <div className="info-item">
+          <div className="text" style={{ flex: 1 }}>
+            <div className="info-title">Смена пароля</div>
+            {!editPwd ? (
+              <div className="info-subtitle">••••••••</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="Старый пароль"
+                  value={oldPwd}
+                  onChange={(e) => setOldPwd(e.target.value)}
+                />
+                <input
+                  className="input"
+                  type="password"
+                  placeholder="Минимум 8 символов"
+                  value={newPwd}
+                  onChange={(e) => setNewPwd(e.target.value)}
+                />
+                {pwdError && <div className="error" role="alert">{pwdError}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="info-edit icon-round accept"
+                    title="Сохранить"
+                    aria-label="Сохранить"
+                    onClick={() => pwdMutation.mutate({ old_password: oldPwd, new_password: newPwd })}
+                    disabled={pwdMutation.isPending || newPwd.length < 8 || !oldPwd}
+                  >
+                    <AcceptIcon />
+                  </button>
+                  <button
+                    className="info-edit icon-round cancel"
+                    title="Отмена"
+                    aria-label="Отмена"
+                    onClick={() => { setEditPwd(false); setOldPwd(''); setNewPwd(''); setPwdError('') }}
+                  >
+                    <CancelIcon />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          {!editPwd && (
+            <button className="info-edit" aria-label="Сменить пароль" onClick={() => openEdit('pwd')}>
               <PencilIcon className="pencil-icon" />
             </button>
           )}
@@ -173,7 +258,9 @@ export function ProfilePage() {
         <button className="btn btn-primary profile-logout" onClick={onLogout}>
           Выйти
         </button>
-        <div className="profile-danger">Удалить аккаунт</div>
+        <button className="profile-danger" onClick={() => navigate('/profile/delete')} style={{ background:'transparent', border:0, cursor:'pointer' }}>
+          Удалить аккаунт
+        </button>
       </div>
     </div>
   )

@@ -21,6 +21,8 @@ const statusLabels: Record<HistoryItem['status'], string> = {
   reject: 'Rejected',
 }
 
+const toUiStatus = (raw: string) => (raw ?? 'new').replace(/\s+/g, '_').toLowerCase() as HistoryItem['status']
+
 function formatDate(iso?: string | null) {
   if (!iso) return ''
   const d = new Date(iso)
@@ -48,8 +50,11 @@ export default function TicketDetailPage() {
       <div className="ticket-detail page-content">
         <h2 className="page-title">Вызов мастера</h2>
 
-        {/* Короткое описание проблемы */}
-        <div className="detail-title">{data.title}</div>
+        {/* Короткое описание проблемы + бейдж статуса */}
+        <div className="detail-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>{data.title}</span>
+          <span className={`req-badge st-${toUiStatus(data.status)}`}>{statusLabels[toUiStatus(data.status)]}</span>
+        </div>
         <div className="detail-updated">обновлено {formatDate(updated)}</div>
 
         {/* Подробное описание */}

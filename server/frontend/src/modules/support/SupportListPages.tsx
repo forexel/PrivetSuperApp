@@ -5,16 +5,16 @@ import '../../styles/tickets.css'
 type SupportItem = {
   id: string
   subject: string
-  status: 'new' | 'in_progress' | 'completed' | 'reject'
+  status: 'open' | 'pending' | 'closed' | 'rejected'
   created_at: string
   updated_at?: string
 }
 
 const statusLabel: Record<SupportItem['status'], string> = {
-  new: 'New',
-  in_progress: 'in_progress',
-  completed: 'Done',
-  reject: 'Rejected',
+  open: 'Open',
+  pending: 'Pending',
+  closed: 'Closed',
+  rejected: 'Rejected',
 }
 
 export function SupportListPage() {
@@ -74,11 +74,11 @@ export function SupportListPage() {
               >
                 <div className="req-avatar" />
                 <div>
-                  <div className="req-title">{t.subject}</div>
-                  <div className="req-meta">
-                    {when}
+                  <div className="req-title-row">
+                    <div className="req-title">{t.subject}</div>
                     <span className={`req-badge st-${t.status}`}>{statusLabel[t.status]}</span>
                   </div>
+                  <div className="req-meta">{when}</div>
                 </div>
               </li>
             )

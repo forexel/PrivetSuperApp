@@ -1,19 +1,29 @@
 import { Link } from 'react-router-dom'
+import { useState } from 'react'
 
 export function ForgotPasswordPage() {
+  const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     const form = e.currentTarget
     const email = new FormData(form).get('email') as string
-    if (!email) return
+    if (!email || sent) return
     try {
+      setLoading(true)
       await fetch('/api/v1/auth/forgot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
       })
-      alert('Если такой email существует, на него отправлено письмо с инструкциями.')
-    } catch (_) {}
+      setSent(true)
+    } catch (_) {
+      // Даже при ошибке не раскрываем детали: показываем такое же сообщение
+      setSent(true)
+    } finally {
+      setLoading(false)
+    }
   }
   return (
     <div className="page-full page-blue">
@@ -22,14 +32,18 @@ export function ForgotPasswordPage() {
       <div className="card auth-card">
         <h1 className="card-title">Восстановление пароля</h1>
 
-        <form className="form" onSubmit={onSubmit}>
-          <div className="form-field">
-            <label className="label">Email</label>
-            <input name="email" className="input" type="email" placeholder="Email" />
-          </div>
+        {!sent ? (
+          <form className="form" onSubmit={onSubmit}>
+            <div className="form-field">
+              <label className="label">Email</label>
+              <input name="email" className="input" type="email" placeholder="Email" disabled={loading} />
+            </div>
 
-          <button className="btn btn-primary" type="submit">Восстановить</button>
-        </form>
+            <button className="btn btn-primary" type="submit" disabled={loading}>Восстановить</button>
+          </form>
+        ) : (
+          <div className="success-text">Письмо с новым паролем отправлено</div>
+        )}
 
         <div className="auth-footer">
           <div>

@@ -78,11 +78,11 @@ export function TicketsListPage() {
               >
                 <div className="req-avatar" />
                 <div>
-                  <div className="req-title">{t.title}</div>
-                  <div className="req-meta">
-                    {when}
+                  <div className="req-title-row">
+                    <div className="req-title">{t.title}</div>
                     <span className={`req-badge st-${uiStatus}`}>{statusLabel[uiStatus]}</span>
                   </div>
+                  <div className="req-meta">{when}</div>
                 </div>
               </li>
             )

@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password, verify_password
@@ -86,6 +86,27 @@ class UserService(BaseService):
     async def delete(self, user: User) -> None:
         user.status = UserStatus.DELETED
         user.deleted_at = datetime.utcnow()
+        await self.db.commit()
+
+    async def purge_user(self, user: User) -> None:
+        """Hard-delete user and related data (tickets, support cases, devices, sessions, subscriptions)."""
+        uid = user.id
+        # Import models locally to avoid circulars
+        from app.models.tickets import Ticket
+        from app.models.support import SupportCase
+        from app.models.devices import Device
+        from app.models.sessions import Session
+        from app.models.subscriptions import Subscription
+
+        # Delete children first (messages/attachments/history cascade from parent tables)
+        await self.db.execute(delete(Ticket).where(Ticket.user_id == uid))
+        await self.db.execute(delete(SupportCase).where(SupportCase.user_id == uid))
+        await self.db.execute(delete(Device).where(Device.user_id == uid))
+        await self.db.execute(delete(Session).where(Session.user_id == uid))
+        await self.db.execute(delete(Subscription).where(Subscription.user_id == uid))
+
+        # Finally, delete the user
+        await self.db.execute(delete(User).where(User.id == uid))
         await self.db.commit()
 
 
