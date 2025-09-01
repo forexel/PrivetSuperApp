@@ -11,11 +11,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 class UserService(BaseService):
-    async def create(self, phone: str, password: str, name: str = None, email: str = None) -> User:
+    async def create(self, phone: str, password: str, name: str = None, email: str = None, address: str | None = None) -> User:
         # нормализация входа
         phone = (phone or "").strip()
         name  = (name  or "").strip()        # чтобы не улетал NULL в NOT NULL колонку
         email = (email or None)
+        address = (address or None)
 
         # быстрые явные проверки дублей — для понятных сообщений
         exists_phone = await self.db.scalar(select(User.id).where(User.phone == phone))
@@ -31,7 +32,8 @@ class UserService(BaseService):
             phone=phone,
             password_hash=hash_password(password),
             name=name,
-            email=email
+            email=email,
+            address=address,
         )
         self.db.add(user)
         try:
@@ -73,8 +75,11 @@ class UserService(BaseService):
         return await self.db.get(User, user_id)
 
     async def update(self, user: User, **kwargs) -> User:
+        # allowlist only safe fields to update
+        allowed = { 'name', 'email', 'address' }
         for key, value in kwargs.items():
-            setattr(user, key, value)
+            if key in allowed:
+                setattr(user, key, value)
         await self.db.commit()
         return user
 

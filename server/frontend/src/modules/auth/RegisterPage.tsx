@@ -46,7 +46,8 @@ function formatFromDigits(d: string) {
 }
 
 const schema = z.object({
-  name: z.string().min(1, 'Введите имя'),
+  name: z.string().min(1, 'Введите имя и фамилию'),
+  address: z.string().optional(),
   email: z.string().email('Введите корректный email'),
   phone: z.string().min(10, 'Введите телефон'),
   password: z.string().min(8, 'Минимум 8 символов'),
@@ -60,7 +61,7 @@ export function RegisterPage() {
     resolver: zodResolver(schema),
     mode: 'onSubmit',
     reValidateMode: 'onChange',
-    defaultValues: { name: '', email: '', phone: '', password: '' },
+    defaultValues: { name: '', address: '', email: '', phone: '', password: '' },
   })
 
   const [submitError, setSubmitError] = useState<string>('')
@@ -94,7 +95,7 @@ export function RegisterPage() {
   const onSubmit = async (data: FormValues) => {
     setSubmitError('')
     clearErrors()
-    const payload = { name: data.name, email: data.email, phone: digits, password: data.password }
+    const payload = { name: data.name, address: data.address || undefined, email: data.email, phone: digits, password: data.password }
     try {
       // регистрируем
       await api.post('/api/v1/auth/register', payload)
@@ -153,9 +154,14 @@ export function RegisterPage() {
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="form">
           <div className="form-field">
-            <label className="label">Имя</label>
-            <input className="input" placeholder="Иван" {...register('name')} />
+            <label className="label">Имя Фамилия</label>
+            <input className="input" placeholder="Иван Иванов" {...register('name')} />
             {errors.name && <small style={{ color: 'red' }}>{errors.name.message}</small>}
+          </div>
+          <div className="form-field">
+            <label className="label">Адрес</label>
+            <input className="input" placeholder="Город, улица, дом" {...register('address')} />
+            {errors.address && <small style={{ color: 'red' }}>{(errors as any).address?.message}</small>}
           </div>
           <div className="form-field">
             <label className="label">Телефон</label>
