@@ -46,10 +46,18 @@ export default function TicketDetailPage() {
   return (
     <div className="page-white">
       <div className="ticket-detail page-content">
-        <h2 className="page-title">Вызов мастера</h2>
+        <div className="page-header">
+          <button className="back-btn" aria-label="Назад" onClick={() => window.location.assign('/tickets')}>
+            ←
+          </button>
+          <h2 className="page-title">Вызов мастера</h2>
+        </div>
 
-        {/* Короткое описание проблемы */}
-        <div className="detail-title">{data.title}</div>
+        {/* Короткое описание проблемы + актуальный статус */}
+        <div className="detail-title-row">
+          <div className="detail-title">{data.title}</div>
+          <span className={`status-badge status-${data.status}`}>{statusLabels[data.status]}</span>
+        </div>
         <div className="detail-updated">обновлено {formatDate(updated)}</div>
 
         {/* Подробное описание */}

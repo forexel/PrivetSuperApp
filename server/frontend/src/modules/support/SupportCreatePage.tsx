@@ -52,10 +52,11 @@ export function SupportCreatePage() {
 
   return (
     <div className="page-blue">
-      <CloseFloating onClick={() => navigate(-1)} />
+      <div className="modal-wrap">
+        <CloseFloating onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/support', { replace: true }))} />
 
-      <div className="card auth-card">
-        <h2 className="card-title">Новое обращение</h2>
+        <div className="card auth-card">
+          <h2 className="card-title">Новое обращение</h2>
 
         <form className="form" onSubmit={handleSubmit(onSubmit)}>
           <div className="form-field">
@@ -89,6 +90,7 @@ export function SupportCreatePage() {
             <p className="error" role="alert">Не удалось отправить обращение. Попробуйте ещё раз.</p>
           )}
         </form>
+      </div>
       </div>
     </div>
   )

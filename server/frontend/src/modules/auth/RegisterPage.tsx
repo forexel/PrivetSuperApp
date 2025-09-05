@@ -17,7 +17,18 @@ const api = {
       },
       body: JSON.stringify(body ?? {}),
     })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
+    if (!r.ok) {
+      let data: any = null
+      try {
+        data = await r.json()
+      } catch {
+        // no json in body
+      }
+      const err: any = new Error(`HTTP ${r.status}`)
+      err.status = r.status
+      err.response = { status: r.status, data }
+      throw err
+    }
     return { data: (await r.json()) as T }
   },
 }
@@ -45,11 +56,18 @@ function formatFromDigits(d: string) {
   return out
 }
 
+const fullNameSchema = z
+  .string()
+  .min(5, 'Введите Имя и Фамилию')
+  .refine((v) => /\s/.test(v), 'Введите Имя и Фамилию')
+  .refine((v) => !/[0-9]/.test(v), 'Введите Имя и Фамилию')
+
 const schema = z.object({
-  name: z.string().min(1, 'Введите имя'),
-  email: z.string().email('Введите корректный email'),
-  phone: z.string().min(10, 'Введите телефон'),
-  password: z.string().min(8, 'Минимум 8 символов'),
+  name: fullNameSchema,
+  email: z.string().email('Введите коорректный E-mail'),
+  phone: z.string().min(10, 'Введите корректный номер телефона'),
+  password: z.string().min(8, 'Введите минимум 8 символов'),
+  address: z.string().min(8, 'Введите корректный адрес'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -60,7 +78,7 @@ export function RegisterPage() {
     resolver: zodResolver(schema),
     mode: 'onSubmit',
     reValidateMode: 'onChange',
-    defaultValues: { name: '', email: '', phone: '', password: '' },
+    defaultValues: { name: '', email: '', phone: '', password: '', address: '' },
   })
 
   const [submitError, setSubmitError] = useState<string>('')
@@ -94,6 +112,7 @@ export function RegisterPage() {
   const onSubmit = async (data: FormValues) => {
     setSubmitError('')
     clearErrors()
+    // backend сейчас не принимает address — не отправляем его в payload
     const payload = { name: data.name, email: data.email, phone: digits, password: data.password }
     try {
       // регистрируем
@@ -104,15 +123,47 @@ export function RegisterPage() {
         password: data.password,
       })
       const token = (loginResp as any)?.data?.access_token || (loginResp as any)?.data?.token || (loginResp as any)?.data?.accessToken
+      const refresh = (loginResp as any)?.data?.refresh_token
       if (!token) throw new Error('Нет access_token в ответе')
-      localStorage.setItem('access_token', token)
+      try {
+        localStorage.setItem('access_token', token)
+        if (refresh) localStorage.setItem('refresh_token', refresh)
+      } catch {}
       navigate('/')
     } catch (e: any) {
       console.error('Registration error', e)
+      // Ошибка API/валидации
+      const status = e?.status || e?.response?.status
       const detail = e?.response?.data?.detail
 
       const pushFieldError = (field: keyof FormValues, msg: string) => {
         setError(field, { type: 'server', message: msg })
+      }
+
+      // 8) дубликаты e-mail/телефона
+      if (status === 409) {
+        // Конфликт: уже существуют email и/или телефон
+        let marked = false
+        if (Array.isArray(detail)) {
+          for (const it of detail) {
+            const msg = it?.msg || 'уже зарегистрирован'
+            const loc: any[] = Array.isArray(it?.loc) ? it.loc : []
+            const field = (loc[1] as string) || ''
+            if (field === 'email') { marked = true; pushFieldError('email', msg) }
+            if (field === 'phone') { marked = true; pushFieldError('phone', msg) }
+          }
+        } else if (typeof detail === 'string') {
+          const s = detail.toLowerCase()
+          if (s.includes('mail')) { marked = true; pushFieldError('email', 'Этот e-mail уже зарегистрирован') }
+          if (s.includes('тел') || s.includes('phone')) { marked = true; pushFieldError('phone', 'Этот телефон уже зарегистрирован') }
+        }
+        if (!marked) {
+          // если сервер не указал конкретные поля — подсветим оба
+          pushFieldError('email', 'Этот e-mail уже зарегистрирован')
+          pushFieldError('phone', 'Этот телефон уже зарегистрирован')
+        }
+        setSubmitError('Такой e-mail и/или телефон уже зарегистрированы. Попробуйте использовать другие данные')
+        return
       }
 
       let fallback: string | null = null
@@ -135,8 +186,11 @@ export function RegisterPage() {
         }
       } else if (detail && typeof detail === 'object') {
         fallback = (detail as any).msg || JSON.stringify(detail)
+      } else if (status) {
+        // 9) если АПИ не ответило/ошибка — показать текст + номер ошибки
+        fallback = `Что-то пошло не так и номер ошибки ответа от сервера ${status}`
       } else if (e?.message) {
-        fallback = e.message
+        fallback = `Что-то пошло не так и номер ошибки ответа от сервера ${e.message}`
       }
 
       if (fallback) setSubmitError(fallback)
@@ -149,13 +203,13 @@ export function RegisterPage() {
       <div className="card auth-card">
         <h1 className="card-title">Регистрация</h1>
         {submitError && (
-          <div style={{ color: 'red', marginBottom: 12, textAlign: 'center' }}>{submitError}</div>
+          <p className="error" role="alert" style={{ textAlign: 'center', marginBottom: 12 }}>{submitError}</p>
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="form">
           <div className="form-field">
-            <label className="label">Имя</label>
-            <input className="input" placeholder="Иван" {...register('name')} />
-            {errors.name && <small style={{ color: 'red' }}>{errors.name.message}</small>}
+            <label className="label">Имя Фамилия</label>
+            <input className="input" placeholder="Иван Иванов" aria-invalid={!!errors.name} {...register('name')} />
+            {errors.name && <small className="error" role="alert">{errors.name.message}</small>}
           </div>
           <div className="form-field">
             <label className="label">Телефон</label>
@@ -170,18 +224,24 @@ export function RegisterPage() {
               value={uiPhone}
               onChange={onPhoneChange}
               onKeyDown={onPhoneKeyDown}
+              aria-invalid={!!errors.phone}
             />
-            {errors.phone && <small style={{ color: 'red' }}>{errors.phone.message}</small>}
+            {errors.phone && <small className="error" role="alert">{errors.phone.message}</small>}
+          </div>
+          <div className="form-field">
+            <label className="label">Адрес</label>
+            <input className="input" placeholder="г. Москва, ул. Ленина, д. 8к2 кв 35" aria-invalid={!!errors.address} {...register('address')} />
+            {errors.address && <small className="error" role="alert">{errors.address.message}</small>}
           </div>
           <div className="form-field">
             <label className="label">Email</label>
-            <input className="input" placeholder="Email" {...register('email')} />
-            {errors.email && <small style={{ color: 'red' }}>{errors.email.message}</small>}
+            <input className="input" placeholder="Email" aria-invalid={!!errors.email} {...register('email')} />
+            {errors.email && <small className="error" role="alert">{errors.email.message}</small>}
           </div>
           <div className="form-field">
             <label className="label">Пароль</label>
-            <input className="input" type="password" placeholder="Минимум 8 символов" {...register('password')} />
-            {errors.password && <small style={{ color: 'red' }}>{errors.password.message}</small>}
+            <input className="input" type="password" placeholder="Минимум 8 символов" aria-invalid={!!errors.password} {...register('password')} />
+            {errors.password && <small className="error" role="alert">{errors.password.message}</small>}
           </div>
           <button className="btn btn-primary" disabled={isSubmitting}>Зарегистрироваться</button>
         </form>

@@ -1,23 +1,44 @@
 type HttpError = Error & { status?: number }
 
-function logoutAndGoLogin() {
+async function tryRefreshToken(): Promise<boolean> {
   try {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-  } catch {}
-  if (location.pathname !== '/login') location.assign('/login')
+    const refresh = localStorage.getItem('refresh_token')
+    if (!refresh) return false
+    const r = await fetch('/api/v1/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refresh }),
+    })
+    if (!r.ok) return false
+    const data: any = await r.json()
+    if (data?.access_token) localStorage.setItem('access_token', data.access_token)
+    if (data?.refresh_token) localStorage.setItem('refresh_token', data.refresh_token)
+    return !!data?.access_token
+  } catch {
+    return false
+  }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
+async function request<T>(url: string, init?: RequestInit, _retried = false): Promise<T> {
   const token = localStorage.getItem('access_token')
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
 
   const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers as any) } })
+  if (res.status === 401 && !_retried) {
+    const refreshed = await tryRefreshToken()
+    if (refreshed) {
+      return request<T>(url, init, true)
+    }
+    // refresh не удался — очищаем токены и уводим на /login
+    try { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token') } catch {}
+    if (typeof window !== 'undefined') {
+      window.location.replace('/login')
+    }
+  }
   if (!res.ok) {
     const err: HttpError = new Error(`HTTP ${res.status}`)
     err.status = res.status
-    if (res.status === 401) logoutAndGoLogin()
     throw err
   }
   const text = await res.text()

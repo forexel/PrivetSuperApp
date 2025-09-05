@@ -6,16 +6,18 @@ export function SupportSuccessPage() {
   const navigate = useNavigate()
   return (
     <div className="page-blue">
-      <CloseFloating onClick={() => navigate(-1)} />
+      <div className="modal-wrap">
+        <CloseFloating onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/support', { replace: true }))} />
 
-      <div className="card auth-card">
-        <h2 className="card-title">Обращение отправлено</h2>
-        <p style={{ textAlign: 'center' }}>
-          Мы получили ваше сообщение. Оператор свяжется с вами, чтобы уточнить детали.
-        </p>
-        <button className="btn btn-primary" onClick={() => navigate('/support')}>
-          Вернуться
-        </button>
+        <div className="card auth-card">
+          <h2 className="card-title">Обращение отправлено</h2>
+          <p className="success-text">
+            Мы получили ваше сообщение. Оператор свяжется с вами, чтобы уточнить детали.
+          </p>
+          <button className="btn btn-primary" onClick={() => navigate('/support')}>
+            Вернуться
+          </button>
+      </div>
       </div>
     </div>
   )

@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, Link } from 'react-router-dom'
+import '../../styles/forms.css'
 
 // lightweight fetch client with auth header
 const api = {
@@ -46,7 +47,11 @@ function formatFromDigits(d: string) {
 }
 
 const schema = z.object({
-  phone: z.string().min(10, 'Введите телефон'),
+  phone: z
+    .string()
+    .trim()
+    .min(1, 'Введите телефон')
+    .refine((v) => v.length === 10, 'Введите корректный телефон'),
   password: z.string().min(1, 'Введите пароль'),
 })
 
@@ -96,8 +101,12 @@ export function LoginPage() {
     try {
       const resp = await api.post('/api/v1/auth/login', payload)
       const token = (resp as any)?.data?.access_token || (resp as any)?.data?.token || (resp as any)?.data?.accessToken
+      const refresh = (resp as any)?.data?.refresh_token
       if (!token) throw new Error('Нет access_token в ответе')
-      localStorage.setItem('access_token', token)
+      try {
+        localStorage.setItem('access_token', token)
+        if (refresh) localStorage.setItem('refresh_token', refresh)
+      } catch {}
       navigate('/')
     } catch {
       setAuthError('Неверный телефон или пароль')
@@ -110,7 +119,7 @@ export function LoginPage() {
       <div className="card auth-card">
         <h1 className="card-title">Авторизация</h1>
         {authError && (
-          <div style={{ color: 'red', marginBottom: 12, textAlign: 'center' }}>{authError}</div>
+          <p className="error" role="alert" style={{ textAlign: 'center', marginBottom: 12 }}>{authError}</p>
         )}
         <form onSubmit={handleSubmit(onSubmit)} className="form">
           <div className="form-field">
@@ -126,13 +135,14 @@ export function LoginPage() {
               value={uiPhone}
               onChange={onPhoneChange}
               onKeyDown={onPhoneKeyDown}
+              aria-invalid={!!errors.phone}
             />
-            {errors.phone && <small style={{ color: 'red' }}>{errors.phone.message}</small>}
+            {errors.phone && <small className="error" role="alert">{errors.phone.message}</small>}
           </div>
           <div className="form-field">
             <label className="label">Пароль</label>
-            <input className="input" type="password" placeholder="Введите пароль..." {...register('password')} />
-            {errors.password && <small style={{ color: 'red' }}>{errors.password.message}</small>}
+            <input className="input" type="password" placeholder="Введите пароль..." aria-invalid={!!errors.password} {...register('password')} />
+            {errors.password && <small className="error" role="alert">{errors.password.message}</small>}
           </div>
           <button className="btn btn-primary" disabled={isSubmitting}>Войти</button>
         </form>

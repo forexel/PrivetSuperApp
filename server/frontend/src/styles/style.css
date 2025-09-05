@@ -30,10 +30,20 @@ body{
   width: 100%;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
   background: #fff;  /* важно: чтобы под меню не виднелся .page-blue */
-  min-height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom));
-  overflow-y: auto;     /* <- скролл только внутри контента, когда реально нужно */
-  overscroll-behavior: contain; 
+  /* фиксируем высоту области контента = высоте окна минус нижнее меню,
+     чтобы внутренние страницы прокручивались при переполнении и не уезжали под меню */
+  height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
 }
+
+/* Без нижнего меню: используем всю высоту и убираем подложку */
+.app--no-nav .app-content{
+  padding-bottom: env(safe-area-inset-bottom);
+  height: 100dvh;
+}
+.app--no-nav::after{ display: none; }
 
 :root{
   --auth-bg: #3E8BBF;   /* твой новый фон */
@@ -53,7 +63,7 @@ body{
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 12px 25px calc(env(safe-area-inset-bottom) + 24px); /* БЕЗ var(--nav-h) */
+  padding: 28px 20px calc(env(safe-area-inset-bottom) + 20px); /* подняли форму и текст выше */
   background: var(--auth-bg);
   box-sizing: border-box;
   overflow-y: auto;
@@ -63,8 +73,8 @@ body{
 
 /* большой белый заголовок наверху */
 .auth-hero-title{
-  margin:0 0 20px 0;        /* было 32px — меньше зазор */
-  font-size: 36px;          /* если нужно ещё крупнее — 40px */
+  margin:0 0 12px 0;        /* ещё компактнее */
+  font-size: 34px;          /* чуть меньше, чтобы всё влезало */
   font-weight:700;
   line-height:1.2;
   color: var(--text-light);
@@ -78,8 +88,8 @@ body{
   background:#ffffff;
   border-radius:24px;
   box-shadow:0 18px 40px rgba(0,0,0,.15);
-  padding:18px 12px;        /* компактные внутренние поля */
-  margin: 0 6px;            /* меньше боковые поля на узких экранах */
+  padding:16px 12px;        /* ещё компактнее */
+  margin: 4px 6px 0;        /* подняли карточку ближе к заголовку */
   box-sizing:border-box;
 }
 
@@ -143,3 +153,4 @@ html, body, input, textarea, button, select {
   width: 100%;
   min-width: 0;  /* чтобы flex не сжимал/не давал минималки */
 }
+

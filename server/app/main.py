@@ -32,18 +32,38 @@ app.mount("/assets", StaticFiles(directory=str(ASSETS_DIR)), name="assets")
 @app.get("/", include_in_schema=False)
 async def spa_root():
     index_file = DIST_DIR / "index.html"
-    return FileResponse(index_file) if index_file.exists() else Response("Frontend build not found. Run npm run build in frontend.", status_code=503)
+    if index_file.exists():
+        # Disable caching for the HTML shell to avoid serving stale index.html
+        return Response(
+            content=index_file.read_text(encoding="utf-8"),
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
+    return Response("Frontend build not found. Run npm run build in frontend.", status_code=503)
 
 # SPA fallback: любые пути — тоже index.html (для React Router)
 @app.get("/{path:path}", include_in_schema=False)
 async def spa_catch_all(path: str):
     index_file = DIST_DIR / "index.html"
-    return FileResponse(index_file) if index_file.exists() else Response("Frontend build not found. Run npm run build in frontend.", status_code=503)
+    if index_file.exists():
+        return Response(
+            content=index_file.read_text(encoding="utf-8"),
+            media_type="text/html; charset=utf-8",
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
+    return Response("Frontend build not found. Run npm run build in frontend.", status_code=503)
 
 @app.get("/sw.js", include_in_schema=False)
 async def sw():
     f = DIST_DIR / "sw.js"
-    return FileResponse(f, media_type="application/javascript") if f.exists() else Response(status_code=404)
+    if f.exists():
+        # Ensure the browser doesn't cache an outdated SW
+        return FileResponse(
+            f,
+            media_type="application/javascript",
+            headers={"Cache-Control": "no-store, max-age=0"},
+        )
+    return Response(status_code=404)
 
 # --- Static assets from Vite ---
 # app.mount("/web/assets", StaticFiles(directory=str(ASSETS_DIR)), name="web-assets")
@@ -68,7 +88,7 @@ async def sw():
 async def manifest():
     f = DIST_DIR / "manifest.webmanifest"
     if f.exists():
-        return FileResponse(f)
+        return FileResponse(f, headers={"Cache-Control": "no-store, max-age=0"})
     return Response(status_code=404)
 
 @app.get("/icon.svg", include_in_schema=False)  

@@ -1,18 +1,14 @@
 .form { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
-.form-field { display:flex; flex-direction:column; gap:1px; }
-.label {
-  font-size:16px;
-  color:#374151;
-  align-self: flex-start;
-  margin-left: 5%;
-}
+.form-field { display:flex; flex-direction:column; gap:4px; }
+.field-head{ display:flex; align-items:center; justify-content:space-between; width:90%; margin:0 auto; min-height:18px; gap:8px; }
+.label{ display:block; width:90%; margin:0 auto; font-size:16px; color:#374151; }
 
 .input{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   width:90%;
-  margin: 8px auto 0;
+  margin: 0 auto 0; /* отступ сверху управляется gap у .form-field (4px) */
   height:40px;
   border-radius:12px;
   border:1px solid #e5e7eb;
@@ -35,6 +31,16 @@
 }
 .btn.btn-primary:disabled, .btn-primary:disabled{ opacity:.6; cursor:default; }
 
+/* Secondary (gray) button */
+.btn.btn-secondary, .btn-secondary{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:90%; height:36px;
+  margin: 8px auto 0;
+  border-radius:9999px; border:none;
+  background:#e5e7eb; color:#111827; font-weight:600; font-size:16px; cursor:pointer;
+}
+.btn.btn-secondary:disabled, .btn-secondary:disabled{ opacity:.6; cursor:default; }
+
 .auth-footer{
   display:flex; flex-direction:column; align-items:center;
   gap:14px; margin-top:12px; font-size:14px;
@@ -47,7 +53,7 @@ textarea.input,
 .input.input-area {
   display: block;
   width: 90%;              /* как у input */
-  margin: 8px auto 0;      /* центрирование */
+  margin: 0 auto 0;        /* центрирование; отступ сверху = gap у .form-field */
   height: auto;            /* убираем фиксированную высоту */
   min-height: 120px;       /* комфортная высота */
   padding: 12px 14px;      /* те же внутренние отступы, что и у .input */
@@ -87,7 +93,7 @@ textarea.input, .input.input-area {
 /* Плавающий крестик на «синих» экранах (страницах-модалках) */
 .close-floating{
   position: fixed;
-  top: 12px;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
   right: 12px;
   width: 40px;
   height: 40px;
@@ -97,19 +103,55 @@ textarea.input, .input.input-area {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #fff; /* белый крестик */
+  color: #fff !important; /* белый крестик гарантированно */
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  z-index: 3000; /* поверх всего: меню/оверлеев */
+  pointer-events: auto;
+  -webkit-appearance: none;
+  appearance: none;
+  padding: 0;
+  line-height: 0;
+  background: transparent !important;
+  border: 0 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.close-floating:focus,
+.close-floating:focus-visible,
+.close-floating:active {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 .close-floating-icon{
-  width: 22px;
-  height: 22px;
+  display:block;
+  width: 36px;
+  height: 36px;
+  overflow: visible;
 }
 .close-floating-icon, 
 .close-floating-icon *{
-  fill: currentColor !important;
-  stroke: currentColor !important;
+  fill: #fff !important;
+  stroke: none !important;
+}
+
+/* Контейнер, чтобы позиционировать крестик по ширине контента */
+.modal-wrap{
+  position: relative;
+  width: 100%;
+  max-width: 320px; /* как у .card.auth-card */
+  margin: 0 auto;
+  padding-top: 44px; /* место под крестик внутри контейнера */
+}
+.modal-wrap.modal-wrap--wide{ max-width: 360px; }
+.modal-wrap > .close-floating{
+  position: absolute;
+  top: 0; /* внутри отступа контейнера */
+  right: 0;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 /* Текст на экране успеха */
@@ -122,37 +164,56 @@ textarea.input, .input.input-area {
 }
 
 /* --- Error messages under inputs: same width & horizontal padding as inputs --- */
-.form .error,
-.form-field .error,
-.error-text,
-.field-error,
-.form .helper.error {
-  display: block;
-  width: 90%;           /* aligns with .input width */
-  margin: 4px auto 0;   /* centers under the input (same horizontal margins) */
-  font-size: 12px;
-  line-height: 1.3;
-  color: #ef4444;       /* red */
-  box-sizing: border-box;
+/* Инлайновая ошибка справа от лейбла */
+.field-error-inline{
+  color:#ef4444;
+  font-size:12px;
+  line-height:1.3;
+  text-align:right;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:50%;
 }
 
 /* --- Ошибки под полями: ширина и отступы как у .input (90%) --- */
+
 .form-field { position: relative; } /* безопасно, если появится абсолютная позиция где-то */
 
+/* Блочная ошибка под полем (оставляем поддержку для старых экранов) */
 .form .error,
 .form-field .error,
 .form .helper.error,
 .field-error,
 .error-text,
-p[role="alert"] {
-  display: block;
-  width: 90%;          /* как у .input */
-  margin: 4px auto 0;  /* центрируем под полем */
-  font-size: 12px;
-  line-height: 1.3;
-  color: #ef4444;      /* красный */
-  text-align: left;
-  box-sizing: border-box;
+p[role="alert"].error {
+  display:block;
+  width:90%;
+  /* Fit exactly into the form-field gap without adding extra space */
+  margin:0 auto;
+  font-size:12px;
+  line-height:1.3;
+  color:#ef4444;
+  text-align:left;
+  box-sizing:border-box;
+}
+
+/* Place field error inside the inter-field gap (no layout shift) */
+.form-field{ position: relative; }
+.form-field > .error{
+  position: absolute;
+  left: 5%;               /* aligns with 90% width inputs */
+  width: 90%;
+  bottom: -12px;          /* consumes the .form gap (12px) */
+  height: 12px;           /* stay within the gap height */
+  margin: 0;
+  font-size: 10px;        /* slightly smaller font */
+  line-height: 12px;      /* one line exactly fits the gap */
+  color: #ef4444;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;   /* avoid accidental clicks/selection */
 }
 
 /* Подсветка поля с ошибкой (не расширяет разметку) */
@@ -168,4 +229,27 @@ textarea.input[aria-invalid="true"],
 .input.input-area[aria-invalid="true"] {
   border-color: #ef4444;
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+/* Текст на экране успеха */
+.success-text{
+  margin: 8px 0 0;
+  font-size: 16px;         /* можно 14 → 16 для читабельности */
+  line-height: 1.45;
+  color: #374151;
+  text-align: center;
+}
+
+/* Контейнер для центровки кнопки */
+.success-actions{
+  display: flex;
+  justify-content: center;  /* по центру */
+}
+
+/* Сама кнопка внутри — ширина как у остальных в формах */
+.success-actions .btn-primary{
+  width: 90%;
+  max-width: 520px;         /* чтобы на широких экранах не расползалась */
+  margin: 12px auto 0;      /* центрируем */
+  display: inline-flex;     /* оставляем inline-flex, как у .btn */
 }

@@ -58,12 +58,13 @@ export function TicketCreatePage() {
 
   return (
     <div className="page-blue">
-      <CloseFloating onClick={() => navigate(-1)} />
+      <div className="modal-wrap">
+        <CloseFloating onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/tickets', { replace: true }))} />
 
-      <div className="card auth-card">
-        <h2 className="card-title">Оформление заявки</h2>
+        <div className="card auth-card">
+          <h2 className="card-title">Оформление заявки</h2>
 
-        <form className="form ticket-form" onSubmit={handleSubmit(onSubmit)}>
+          <form className="form ticket-form" onSubmit={handleSubmit(onSubmit)}>
           <div className="form-field">
             <div className="label">Что сломалось?</div>
             <input
@@ -101,6 +102,7 @@ export function TicketCreatePage() {
             </p>
           )}
         </form>
+      </div>
       </div>
     </div>
   )

@@ -3,6 +3,9 @@
 .req-item{display:grid;grid-template-columns:40px 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)}
 .req-avatar{width:32px;height:32px;border-radius:50%;background:#E5E7EB}
 .req-title{font-size:14px;font-weight:700;color:var(--text-dark);text-decoration:none}
+.req-title-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:nowrap}
+.req-title-row .req-title{flex:0 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.req-title-row .req-badge{flex:0 0 auto}
 .req-meta{font-size:12px;color:#6B7280}
 .req-dot{margin:0 6px}
 .req-fab {
@@ -60,10 +63,16 @@
 
 
 /* — подвал ввода — */
-.chat-input{display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
-.input{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;box-sizing:border-box}
+.chat-input{display:flex;align-items:flex-end;gap:8px;margin:12px 0 14px}
+.chat-input{position: sticky; bottom: 0; background:#fff; padding-top:8px}
+.input{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;box-sizing:border-box;color: var(--text-dark, #111827)}
+.input:focus{outline:none;border-color:#cbd5e1}
+.input.input-area.auto-grow{resize:none;min-height:40px;max-height:180px;overflow:auto}
+.input-wrap{ position: relative; flex: 1 1 auto; }
+.input-placeholder{ position:absolute; left:12px; right:12px; top:0; bottom:0; display:flex; align-items:center; color:#9CA3AF; pointer-events:none; }
 .btn{border:0;border-radius:9999px;height:36px;padding:0 16px;cursor:pointer}
 .btn-primary{background:#111827;color:#fff;font-weight:700}
+.btn-send{border-radius:50%;background:var(--accent,#62B7FF);color:#0b0c10;font-weight:700;font-size:20px;display:inline-flex;align-items:center;justify-content:center;border:0;flex:0 0 auto;padding:0;line-height:1;box-sizing:border-box}
 
 /* Карточка деталки */
 .ticket-detail .detail-title{
@@ -116,6 +125,21 @@
   justify-content: space-between;
   gap: 12px;
 }
+.history-body{
+  flex: 1 1 auto;
+  text-align: left;
+  color: var(--text-dark, #111827);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.history-body{
+  flex: 1 1 auto;
+  text-align: left;
+  color: var(--text-dark, #111827);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .status-badge{
   display: inline-flex;
   align-items: center;
@@ -133,6 +157,13 @@
   font-size: 12px;
   color: #6B7280;
 }
+
+/* Header with back button */
+.page-header{ position:relative; display:flex; align-items:center; justify-content:center; min-height:32px; }
+.page-header .page-title{ margin:0; text-align:center; width:100%; }
+.back-btn{ position:absolute; left:0; top:50%; transform:translateY(-50%); background:transparent; border:0; font-size:20px; line-height:1; cursor:pointer; color:#111827; padding:4px 6px; border-radius:8px }
+.back-btn:focus{ outline:none }
+.back-btn:focus-visible{ outline:2px solid #cbd5e1; outline-offset:2px }
 
 /* Белый экран для детальной заявки */
 .page-white{
@@ -165,6 +196,8 @@
   font-weight: 700;
   color: var(--text-dark, #111827);
 }
+.detail-title-row{ display:inline-flex; align-items:center; gap:8px; flex-wrap:nowrap; }
+.detail-title-row .detail-title{ flex:0 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 .ticket-detail .detail-updated{
   margin-top: 2px;
@@ -180,12 +213,40 @@
   margin: 16px 0;
 }
 
-/* Сделать детальную заявку шире: использовать всю ширину контейнера */
+/* Детальная заявка: ограничиваем ширину как у остального контента */
 .page-white .ticket-detail.page-content{
-  max-width: 100% !important;
-  width: 100% !important;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
+  max-width: var(--content-max);
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   padding-left: 20px;
   padding-right: 20px;
 }
+
+/* Ensure chat input field spans full width inside sticky area */
+.chat-input .input.input-area{ width: 100%; margin: 0; }
+
+/* --- Fixed input bar on detail pages --- */
+.chat-input-fixed{
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  background: #fff;
+  padding: 8px 12px calc(env(safe-area-inset-bottom) + 8px);
+  border-top: 1px solid var(--border, #e5e7eb);
+  z-index: 1500;
+  display: flex; justify-content: center;
+}
+.chat-input-fixed .chat-input{ margin: 0; width: 100%; max-width: var(--content-max); }
+.chat-input-fixed .chat-input{ position: static; }
+.chat-input-fixed .input.input-area.auto-grow{ overflow: hidden; }
+
+/* Ensure page content has space under fixed bar */
+.page-white .ticket-detail.page-content{ padding-bottom: calc(24px + var(--chat-pad, 88px)); }
+
+/* --- Pin input to the bottom on detail pages --- */
+.page-white .ticket-detail.page-content{
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh; /* fill the viewport height */
+}
+.chat-input{ margin-top: auto; }

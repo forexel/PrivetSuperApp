@@ -79,6 +79,33 @@ class UserService(BaseService):
         return user
 
     async def delete(self, user: User) -> None:
+        # 1) Отвязываем устройства пользователя (исчезнут из его списка)
+        try:
+            from app.models.devices import Device  # локальный импорт, чтобы избежать циклов
+            await self.db.execute(
+                Device.__table__.update().where(Device.__table__.c.user_id == user.id).values(user_id=None)
+            )
+        except Exception:
+            # без фейла основного удаления аккаунта
+            pass
+
+        # 2) Обезличиваем уникальные поля, чтобы их можно было использовать повторно
+        try:
+            stamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            uid = str(user.id).replace('-', '')[:12]
+            prefix = f"del_{stamp}_{uid}_"
+            # Избегаем двойного префикса при повторных вызовах
+            if getattr(user, 'email', None):
+                if not str(user.email).startswith('del_'):
+                    user.email = f"{prefix}{user.email}"
+            if getattr(user, 'phone', None):
+                if not str(user.phone).startswith('del_'):
+                    user.phone = f"{prefix}{user.phone}"
+        except Exception:
+            # Если что-то пошло не так с маскировкой — не блокируем удаление
+            pass
+
+        # 3) Помечаем пользователя как удалённого
         user.status = UserStatus.DELETED
         user.deleted_at = datetime.utcnow()
         await self.db.commit()

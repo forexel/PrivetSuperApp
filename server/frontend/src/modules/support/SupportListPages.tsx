@@ -5,16 +5,26 @@ import '../../styles/tickets.css'
 type SupportItem = {
   id: string
   subject: string
-  status: 'new' | 'in_progress' | 'completed' | 'reject'
+  status: 'new' | 'in_progress' | 'completed' | 'reject' | 'open' | 'pending' | 'closed' | 'rejected'
   created_at: string
   updated_at?: string
 }
 
-const statusLabel: Record<SupportItem['status'], string> = {
+const statusLabel: Record<'new'|'in_progress'|'completed'|'reject', string> = {
   new: 'New',
-  in_progress: 'in_progress',
+  in_progress: 'In progress',
   completed: 'Done',
   reject: 'Rejected',
+}
+
+const toUiStatus = (raw: SupportItem['status']): 'new'|'in_progress'|'completed'|'reject' => {
+  switch (raw) {
+    case 'open': return 'new'
+    case 'pending': return 'in_progress'
+    case 'closed': return 'completed'
+    case 'rejected': return 'reject'
+    default: return (raw as any) as 'new'|'in_progress'|'completed'|'reject'
+  }
 }
 
 export function SupportListPage() {
@@ -74,11 +84,13 @@ export function SupportListPage() {
               >
                 <div className="req-avatar" />
                 <div>
-                  <div className="req-title">{t.subject}</div>
-                  <div className="req-meta">
-                    {when}
-                    <span className={`req-badge st-${t.status}`}>{statusLabel[t.status]}</span>
+                  <div className="req-title-row">
+                    <div className="req-title">{t.subject}</div>
+                    {(() => { const ui = toUiStatus(t.status); return (
+                      <span className={`req-badge st-${ui}`}>{statusLabel[ui]}</span>
+                    )})()}
                   </div>
+                  <div className="req-meta">{when}</div>
                 </div>
               </li>
             )

@@ -1,11 +1,14 @@
-import CloseIcon from '../../assets/icons/close.svg?react'
+import CloseIcon from '../../assets/icons/close.svg?react';
 
-type Props = { onClick: () => void; ariaLabel?: string }
-
-export function CloseFloating({ onClick, ariaLabel = 'Закрыть' }: Props) {
+export function CloseFloating({ onClick, className }: { onClick?:()=>void; className?:string }) {
   return (
-    <button className="close-floating" aria-label={ariaLabel} onClick={onClick}>
+    <button
+      type="button"
+      aria-label="Закрыть"
+      className={`close-floating ${className ?? ''}`}
+      onClick={onClick}
+    >
       <CloseIcon className="close-floating-icon" />
     </button>
-  )
+  );
 }
