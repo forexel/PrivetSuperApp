@@ -128,6 +128,8 @@ export function RegisterPage() {
       try {
         localStorage.setItem('access_token', token)
         if (refresh) localStorage.setItem('refresh_token', refresh)
+        // Сохраним адрес локально, чтобы показать на главной до синхронизации с бэком
+        if (data.address) localStorage.setItem('user_address', data.address)
       } catch {}
       navigate('/')
     } catch (e: any) {

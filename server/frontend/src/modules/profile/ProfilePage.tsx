@@ -6,6 +6,7 @@ import PencilIcon from '../../assets/icons/pencil.svg?react'
 import CancelIcon from '../../assets/icons/cancel.svg?react'
 import AcceptIcon from '../../assets/icons/accept.svg?react'
 import '../../styles/profile.css'
+import { PLAN_TITLES, PERIOD_TITLES } from '../../shared/subscriptions'
 
 type Me = { id: string; name?: string | null; email?: string | null; phone: string; address?: string | null }
 
@@ -27,9 +28,8 @@ export function ProfilePage() {
   const [pwdError, setPwdError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Доп. поля интерфейса из ранней версии страницы (пока статично)
-  const plan = 'Все просто'
-  const paidUntil = '1 Сентября 2026'
+  // Активная подписка
+  const [activeSub, setActiveSub] = useState<{ plan?: string|null; period?: string|null; paid_until?: string|null } | null>(null)
 
   const formatPhone = (raw?: string) => {
     if (!raw) return '—'
@@ -54,6 +54,13 @@ export function ProfilePage() {
         setMe(data)
         setNameValue(data?.name || '')
         setEmailValue(data?.email || '')
+        // подтянем активную подписку параллельно
+        try {
+          const sub = await api.get<{ plan?: string|null; period?: string|null; paid_until?: string|null }>(
+            '/api/v1/subscriptions/active'
+          )
+          if (mounted) setActiveSub(sub)
+        } catch {}
       } catch (e: any) {
         if (!mounted) return
         setError('Не удалось загрузить профиль')
@@ -223,7 +230,12 @@ export function ProfilePage() {
         <div className="info-item">
           <div className="text">
             <div className="info-title">Тариф</div>
-            <div className="info-subtitle">{plan}</div>
+            <div className="info-subtitle">
+              {activeSub?.plan
+                ? (PLAN_TITLES as any)[activeSub.plan as keyof typeof PLAN_TITLES] || activeSub.plan
+                : 'Нет активной подписки'}
+              {activeSub?.period ? ` • ${(PERIOD_TITLES as any)[activeSub.period as keyof typeof PERIOD_TITLES] || activeSub.period}` : ''}
+            </div>
           </div>
         </div>
 
@@ -231,7 +243,11 @@ export function ProfilePage() {
         <div className="info-item">
           <div className="text">
             <div className="info-title">Оплачен до</div>
-            <div className="info-subtitle">{paidUntil}</div>
+            <div className="info-subtitle">
+              {activeSub?.paid_until
+                ? new Date(activeSub.paid_until as any).toLocaleDateString('ru-RU')
+                : '—'}
+            </div>
           </div>
         </div>
 
