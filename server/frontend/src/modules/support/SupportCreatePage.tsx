@@ -58,7 +58,7 @@ export function SupportCreatePage() {
         <div className="card auth-card">
           <h2 className="card-title">Новое обращение</h2>
 
-        <form className="form" onSubmit={handleSubmit(onSubmit)}>
+        <form className="form form--wide" onSubmit={handleSubmit(onSubmit)}>
           <div className="form-field">
             <div className="label">Тема</div>
             <input

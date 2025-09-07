@@ -51,15 +51,24 @@
   align-items: center;
   justify-content: center;
 }
+.btn-fab,
+.btn-fab:hover,
+.btn-fab:active,
+.btn-fab:visited{
+  color: #0B0C10;              /* не меняем цвет текста при hover/visited */
+  text-decoration: none;
+}
 
 /* — чат — */
 .chat{display:flex;flex-direction:column;gap:8px;margin:8px 0 12px}
 .msg{display:flex;flex-direction:column;max-width:90%}
-.msg.user{align-self:flex-end}
-.msg.support{align-self:flex-start}
+.msg.user{align-self:flex-start}
+.msg.support{align-self:flex-end}
 .bubble{background:#f3f4f6;border-radius:12px;padding:8px 10px;line-height:1.3}
-.msg.user .bubble{background:#E0F2FE}
+.msg.support .bubble{background:#E0F2FE}
 .time{font-size:10px;color:#9CA3AF;margin-top:2px}
+.msg .meta{font-size:12px;color:#6B7280;margin:0 4px 4px}
+.msg.support .meta{ text-align: right; }
 
 
 /* — подвал ввода — */

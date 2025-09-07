@@ -19,6 +19,7 @@ from app.models.password_reset_tokens import PasswordResetToken
 from datetime import datetime, timedelta
 import secrets
 from app.core.mailer import send_email
+from app.core.security import hash_password
 import logging
 logger = logging.getLogger("app.auth")
 from app.core.config import settings
@@ -61,32 +62,47 @@ async def forgot_password(
     payload: ForgotPasswordRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    # Always return 204 to avoid leaking whether the account exists.
+    """Issue a new random password and email it to the user.
+
+    We still return 204 regardless of whether the email exists to avoid
+    user enumeration. When an account is found, the password is rotated
+    immediately and an email with the new password is sent.
+    """
     user = await db.scalar(select(User).where(User.email == payload.email))
-    logger.info("Forgot-password requested for %s; user_exists=%s", payload.email, bool(user))
+    logger.info("Forgot-password (rotate) for %s; user_exists=%s", payload.email, bool(user))
     if user:
-        token = secrets.token_urlsafe(32)
-        expires_at = datetime.utcnow() + timedelta(hours=1)
-        db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires_at))
+        # Generate a user-friendly random password: letters+digits, length 12
+        alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+        rng = secrets.SystemRandom()
+        new_password = "".join(rng.choice(alphabet) for _ in range(12))
+
+        # Update password in DB (explicit UPDATE + COMMIT)
         try:
-            await db.commit()
-            logger.info("Password reset token created for user_id=%s", user.id)
-        except Exception as e:
-            logger.exception("Failed to create reset token: %s", e)
-            await db.rollback()
-        try:
-            base_url = settings.APP_BASE_URL or "http://localhost:5173"
-            link = f"{base_url.rstrip('/')}/reset-password?token={token}"
-            subject = "Восстановление пароля"
-            body = (
-                "Мы получили запрос на восстановление пароля.\n\n"
-                f"Ссылка для восстановления (действует 1 час):\n{link}\n\n"
-                "Если вы не делали этот запрос, просто проигнорируйте письмо."
+            from sqlalchemy import update  # local import to avoid top-level cycles
+            new_hash = hash_password(new_password)
+            await db.execute(
+                update(User).where(User.id == user.id).values(password_hash=new_hash)
             )
-            await send_email(subject, body, [payload.email])
-        except Exception:
-            # already logged inside send_email
-            pass
+            await db.commit()
+            logger.info("Password rotated for user_id=%s", user.id)
+        except Exception as e:
+            await db.rollback()
+            logger.exception("Failed to rotate password for user_id=%s: %s", user.id, e)
+        else:
+            # Send email with the new password
+            try:
+                subject = "Ваш новый пароль"
+                body = (
+                    "Вы запросили восстановление пароля.\n\n"
+                    f"Новый пароль: {new_password}\n\n"
+                    "Рекомендуем сменить пароль в личном кабинете после входа.\n"
+                    "Если вы не делали этот запрос, срочно войдите и смените пароль."
+                )
+                await send_email(subject, body, [payload.email])
+            except Exception:
+                # already logged inside send_email
+                pass
+    # Always 204
     return None
 
 # 2 Login endpoint

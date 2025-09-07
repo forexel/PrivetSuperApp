@@ -43,6 +43,10 @@
   font-weight: 700;
   box-shadow: 0 8px 20px rgba(0,0,0,.12);
 }
+.btn-fab,
+.btn-fab:hover,
+.btn-fab:active,
+.btn-fab:visited { color: #0B0C10; text-decoration: none; }
 
 /* Оверлей/шторка */
 .overlay {

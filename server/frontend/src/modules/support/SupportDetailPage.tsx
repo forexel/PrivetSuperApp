@@ -159,14 +159,21 @@ export default function SupportDetailPage() {
           )}
           {!msgsQ.isLoading && messages.length > 0 && (
             <>
-              <ul className="history">
-                {messages.map(m => (
-                  <li key={m.id} className="history-item">
-                    <span className="history-date">{new Date(m.created_at).toLocaleString('ru-RU')}</span>
-                    <div className="history-body">{m.body}</div>
-                  </li>
-                ))}
-              </ul>
+              <div className="chat">
+                {messages.map((m) => {
+                  const isSupport = m.author === 'support'
+                  const who = isSupport ? 'support' : 'Вы'
+                  return (
+                    <div key={m.id} className={`msg ${isSupport ? 'support' : 'user'}`}>
+                      <div className="meta">
+                        <span className="history-date">{new Date(m.created_at).toLocaleString('ru-RU')}</span>
+                        {' · '}{who}
+                      </div>
+                      <div className="bubble">{m.body}</div>
+                    </div>
+                  )
+                })}
+              </div>
               <div ref={listEndRef} />
             </>
           )}
