@@ -64,7 +64,7 @@ export function TicketCreatePage() {
         <div className="card auth-card">
           <h2 className="card-title">Оформление заявки</h2>
 
-          <form className="form ticket-form" onSubmit={handleSubmit(onSubmit)}>
+          <form className="form form--wide ticket-form" onSubmit={handleSubmit(onSubmit)}>
           <div className="form-field">
             <div className="label">Что сломалось?</div>
             <input
