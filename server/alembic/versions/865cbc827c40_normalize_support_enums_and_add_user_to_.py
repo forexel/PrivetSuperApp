@@ -6,55 +6,39 @@ import sqlalchemy as sa
 
 # Идентификаторы ревизии
 revision = "865cbc827c40"
-down_revision = "35b0_merge_heads"  # <- укажи последнюю "merge" ревизию в твоём дереве
+down_revision = "35b0_merge_heads"  # ← если у тебя другой предыдущий хеш — подставь его
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    #
-    # 1) support_tickets.status → supportcasestatus ('open','pending','resolved','closed')
-    #
-    # тип создаём идемпотентно
+    # 1) Создать тип supportcasestatus, если ещё нет
     op.execute(
         """
         DO $$
         BEGIN
-          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'supportcasestatus') THEN
+          IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname='supportcasestatus') THEN
             CREATE TYPE supportcasestatus AS ENUM ('open','pending','resolved','closed');
           END IF;
         END$$;
         """
     )
 
-    # снять дефолт перед сменой типа, затем enum<-text и новый дефолт
+    # 2) Привести support_tickets.status к supportcasestatus и выставить дефолт
+    # (без DO/EXECUTE — три обычных ALTER, чтобы не ловить синтаксические ошибки кавычек)
+    op.execute("ALTER TABLE support_tickets ALTER COLUMN status DROP DEFAULT")
     op.execute(
-        """
-        DO $$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='support_tickets' AND column_name='status'
-          ) THEN
-            EXECUTE 'ALTER TABLE support_tickets ALTER COLUMN status DROP DEFAULT';
-            BEGIN
-              EXECUTE 'ALTER TABLE support_tickets
-                         ALTER COLUMN status TYPE supportcasestatus
-                         USING status::text::supportcasestatus';
-            EXCEPTION
-              WHEN others THEN
-                NULL;
-            END;
-            EXECUTE $$ALTER TABLE support_tickets
-                       ALTER COLUMN status SET DEFAULT 'open'::supportcasestatus$$;
-          END IF;
-        END$$;
-        """
+        "ALTER TABLE support_tickets "
+        "ALTER COLUMN status TYPE supportcasestatus "
+        "USING status::text::supportcasestatus"
+    )
+    op.execute(
+        "ALTER TABLE support_tickets "
+        "ALTER COLUMN status SET DEFAULT 'open'::supportcasestatus"
     )
 
-    #
-    # 2) changed_by_t — добавить значение 'USER' (если отсутствует)
-    #
+    # 3) В enum changed_by_t добавить 'USER' (если отсутствует).
+    # ALTER TYPE ... ADD VALUE требует автокоммита.
     with op.get_context().autocommit_block():
         op.execute(
             """
@@ -72,68 +56,24 @@ def upgrade() -> None:
             """
         )
 
-    #
-    # 3) ticket_status_t — убедиться, что есть 'new', и дефолт для tickets.status = 'new'
-    #
+    # 4) Убедиться, что в ticket_status_t есть 'new', и дефолт для tickets.status = 'new'
     with op.get_context().autocommit_block():
         op.execute("ALTER TYPE ticket_status_t ADD VALUE IF NOT EXISTS 'new';")
 
-    op.execute(
-        """
-        DO $$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='tickets' AND column_name='status'
-          ) THEN
-            EXECUTE $$ALTER TABLE tickets ALTER COLUMN status SET DEFAULT 'new'$$;
-          END IF;
-        END$$;
-        """
-    )
+    op.execute("ALTER TABLE tickets ALTER COLUMN status SET DEFAULT 'new'")
 
 
 def downgrade() -> None:
-    # Откатить значения из ENUM программно нельзя просто так.
-    # Делаем мягкий откат только того, что безопасно.
+    # Частичный безопасный откат:
+    # 1) вернуть дефолт для tickets.status
+    op.execute("ALTER TABLE tickets ALTER COLUMN status SET DEFAULT 'accepted'")
 
-    # вернуть дефолт tickets.status на 'accepted'
+    # 2) support_tickets.status вернуть в TEXT (тип supportcasestatus оставляем, чтобы не поломать другие объекты)
+    op.execute("ALTER TABLE support_tickets ALTER COLUMN status DROP DEFAULT")
     op.execute(
-        """
-        DO $$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='tickets' AND column_name='status'
-          ) THEN
-            EXECUTE $$ALTER TABLE tickets ALTER COLUMN status SET DEFAULT 'accepted'$$;
-          END IF;
-        END$$;
-        """
+        "ALTER TABLE support_tickets "
+        "ALTER COLUMN status TYPE TEXT "
+        "USING status::text"
     )
 
-    # support_tickets.status перевести обратно в TEXT (тип supportcasestatus оставим, если он используется)
-    op.execute(
-        """
-        DO $$
-        BEGIN
-          IF EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_name='support_tickets' AND column_name='status'
-          ) THEN
-            EXECUTE 'ALTER TABLE support_tickets ALTER COLUMN status DROP DEFAULT';
-            BEGIN
-              EXECUTE 'ALTER TABLE support_tickets
-                         ALTER COLUMN status TYPE TEXT
-                         USING status::text';
-            EXCEPTION
-              WHEN others THEN
-                NULL;
-            END;
-          END IF;
-        END$$;
-        """
-    )
-
-    # Значение 'USER' в changed_by_t убирать не пытаемся (опасно).
-    # Тип supportcasestatus можно удалить вручную позже, если точно не используется.
+    # 3) Значение 'USER' в changed_by_t назад не удаляем (в PostgreSQL это небезопасно без переноса данных).
