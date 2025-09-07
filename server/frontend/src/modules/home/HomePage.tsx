@@ -48,6 +48,8 @@ export function HomePage() {
     queryKey: ['me'],
     queryFn: () => api.get<{ address?: string | null }>('/api/v1/user/me'),
   });
+  const localAddress = (typeof localStorage !== 'undefined' ? localStorage.getItem('user_address') : null) || undefined
+  const displayAddress = (me?.address ?? localAddress) || 'Адрес не указан'
 
   // Мэппинг статусов: активные = new + in_progress; всего = все
   const activeTickets = tickets.filter(t => t.status === 'new' || t.status === 'in_progress').length
@@ -71,7 +73,7 @@ export function HomePage() {
       <div className="summary-cards">
         <div className="summary-card">
           <div className="title">Мой адрес</div>
-          <div className="meta">{me?.address ?? 'Адрес не указан'}</div>
+          <div className="meta">{displayAddress}</div>
         </div>
         <div className="summary-card">
           <div className="title">Тариф</div>
