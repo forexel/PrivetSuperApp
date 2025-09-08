@@ -20,6 +20,11 @@
   font-weight: 700;
   color: #111827;
   text-align: center; /* центрируем заголовок */
+  position: sticky;           /* «фиксируем» заголовок при прокрутке */
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 900;
+  background: #fff;           /* чтобы не просвечивал список под ним */
+  padding-top: 2px;           /* микропросвет над текстом */
 }
 
 /* блок с карточками */
@@ -144,7 +149,8 @@
 }
 
 .empty-state{
-  min-height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom));
+  /* Высота экрана минус нижнее меню и safe areas, чтобы не было лишнего скролла */
+  height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom) - env(safe-area-inset-top) - 32px);
   display: flex;
   align-items: center;
   justify-content: center;

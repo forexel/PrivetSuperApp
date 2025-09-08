@@ -15,6 +15,7 @@
   display: flex;
   justify-content: center;
   pointer-events: none;
+  z-index: 1101; /* выше нижнего меню (1000) */
 }
 .req-badge{
   display: inline-block;

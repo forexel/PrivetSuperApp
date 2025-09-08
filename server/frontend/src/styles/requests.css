@@ -32,6 +32,7 @@
   left: 0; right: 0; bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 8px);
   display: flex; justify-content: center;
   pointer-events: none; /* контейнер клики не ловит */
+  z-index: 1101; /* поверх navbar */
 }
 .btn-fab {
   pointer-events: auto;
