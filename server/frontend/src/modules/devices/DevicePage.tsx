@@ -19,7 +19,7 @@ export function DevicePage() {
   const { id } = useParams()
   const { data, isLoading, error } = useQuery({
     queryKey: ['device', id],
-    queryFn: () => api.get<Device>(`/api/v1/devices/${id}`),
+    queryFn: () => api.get<Device>(`/devices/${id}`),
     enabled: !!id,
     retry: false,
   })

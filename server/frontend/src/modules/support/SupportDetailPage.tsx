@@ -33,14 +33,14 @@ export default function SupportDetailPage() {
   const ticketQ = useQuery({
     queryKey: ['support', id],
     enabled: !!id,
-    queryFn: () => api.get<SupportTicketOut>(`/api/v1/support/${id}`),
+    queryFn: () => api.get<SupportTicketOut>(`/support/${id}`),
     retry: false,
   })
 
   const msgsQ = useQuery({
     queryKey: ['support', id, 'messages'],
     enabled: !!id,
-    queryFn: () => api.get<SupportMessageOut[]>(`/api/v1/support/${id}/messages`),
+    queryFn: () => api.get<SupportMessageOut[]>(`/support/${id}/messages`),
     retry: false,
   })
 
@@ -66,7 +66,7 @@ export default function SupportDetailPage() {
   const sendMutation = useMutation({
     mutationFn: async () => {
       setErr('')
-      await api.post(`/api/v1/support/${id}/messages/user`, { body })
+      await api.post(`/support/${id}/messages/user`, { body })
     },
     onSuccess: () => {
       setBody('')

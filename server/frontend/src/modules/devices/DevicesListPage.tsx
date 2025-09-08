@@ -8,7 +8,7 @@ type DeviceListItem = { id: string; title: string }
 export function DevicesListPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['devices', 'list'],
-    queryFn: () => api.get<DeviceListItem[]>('/api/v1/devices/search'),
+    queryFn: () => api.get<DeviceListItem[]>('/devices/search'),
     retry: false,
   })
 

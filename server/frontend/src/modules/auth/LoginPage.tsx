@@ -4,24 +4,10 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, Link } from 'react-router-dom'
+import { api } from '../../shared/api'
 import '../../styles/forms.css'
 
-// lightweight fetch client with auth header
-const api = {
-  async post<T = any>(url: string, body: any): Promise<{ data: T }> {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(body ?? {}),
-    })
-    if (!r.ok) throw new Error(`HTTP ${r.status}`)
-    return { data: (await r.json()) as T }
-  },
-}
+// use shared api with BASE from env
 
 // === phone helpers ===
 const onlyDigits = (s: string) => s.replace(/\D/g, '')
@@ -99,9 +85,10 @@ export function LoginPage() {
     setAuthError('')
     const payload = { phone: digits, password: data.password }
     try {
-      const resp = await api.post('/api/v1/auth/login', payload)
-      const token = (resp as any)?.data?.access_token || (resp as any)?.data?.token || (resp as any)?.data?.accessToken
-      const refresh = (resp as any)?.data?.refresh_token
+      const resp = await api.post<{ access_token?: string; token?: string; accessToken?: string; refresh_token?: string }>(
+        '/auth/login', payload)
+      const token = resp?.access_token || (resp as any)?.token || (resp as any)?.accessToken
+      const refresh = resp?.refresh_token
       if (!token) throw new Error('Нет access_token в ответе')
       try {
         localStorage.setItem('access_token', token)

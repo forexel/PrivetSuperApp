@@ -19,7 +19,7 @@ export default function SubscriptionPage() {
 
   const buy = async (plan: 'simple'|'medium'|'premium') => {
     try {
-      await api.post('/api/v1/subscriptions/create', { plan, period })
+      await api.post('/subscriptions/create', { plan, period })
       nav('/subscriptions/success', { replace: true })
     } catch {
       nav('/subscriptions/denied', { replace: true })

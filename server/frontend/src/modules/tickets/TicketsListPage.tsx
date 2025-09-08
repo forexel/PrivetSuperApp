@@ -26,7 +26,7 @@ export function TicketsListPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['tickets', 'my'],
-    queryFn: () => api.get<TicketListItem[]>('/api/v1/tickets/'),
+    queryFn: () => api.get<TicketListItem[]>('/tickets/'),
     retry: false,
   })
 

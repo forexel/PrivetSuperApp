@@ -14,7 +14,7 @@ type Ticket = {
 
 // Универсальный фетчер: забираем список заявок
 async function fetchTickets(): Promise<Ticket[]> {
-  const data = await api.get<Ticket[] | { items: Ticket[] } | { results: Ticket[] }>('/api/v1/tickets/')
+  const data = await api.get<Ticket[] | { items: Ticket[] } | { results: Ticket[] }>('/tickets/')
   if (Array.isArray(data)) return data
   if ('items' in data && Array.isArray(data.items)) return data.items
   if ('results' in data && Array.isArray(data.results)) return data.results
@@ -34,19 +34,19 @@ export function HomePage() {
   // 1) счётчики поддержки из /support/meta
   const { data: supportMeta } = useQuery({
     queryKey: ['supportMeta'],
-    queryFn: () => api.get<{ active: number; total: number }>('/api/v1/support/meta'),
+    queryFn: () => api.get<{ active: number; total: number }>('/support/meta'),
   });
 
   // 2) активная подписка из /subscriptions/active
   const { data: activeSub } = useQuery({
     queryKey: ['active-subscription'],
-    queryFn: () => api.get<{ plan?: string|null; period?: string|null; paid_until?: string|null }>('/api/v1/subscriptions/active'),
+    queryFn: () => api.get<{ plan?: string|null; period?: string|null; paid_until?: string|null }>('/subscriptions/active'),
   });
 
   // 3) мой адрес
   const { data: me } = useQuery({
     queryKey: ['me'],
-    queryFn: () => api.get<{ address?: string | null }>('/api/v1/user/me'),
+    queryFn: () => api.get<{ address?: string | null }>('/user/me'),
   });
   const localAddress = (typeof localStorage !== 'undefined' ? localStorage.getItem('user_address') : null) || undefined
   const displayAddress = (me?.address ?? localAddress) || 'Адрес не указан'

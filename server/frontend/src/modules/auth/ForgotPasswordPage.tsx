@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { api } from '../../shared/api'
 // @ts-ignore react-hook-form types mismatch; rely on runtime export
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -25,11 +26,7 @@ export function ForgotPasswordPage() {
 
   const onSubmit = async (values: FormValues) => {
     try {
-      await fetch('/api/v1/auth/forgot', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: values.email })
-      })
+      await api.post('/auth/forgot', { email: values.email })
       // Переходим на экран успеха независимо от статуса,
       // чтобы не раскрывать существование/не существование e-mail
       // и пока backend-метод не реализован.

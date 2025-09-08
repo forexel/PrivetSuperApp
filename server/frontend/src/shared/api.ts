@@ -1,10 +1,30 @@
 type HttpError = Error & { status?: number }
 
+// Base URL for API requests
+const BASE: string = (
+  (import.meta.env as any).VITE_API_BASE ||
+  (import.meta.env as any).VITE_API_BASE_URL ||
+  '/api/v1'
+)
+
+function joinUrl(input: string): string {
+  // Absolute http(s) URLs — use as is
+  if (/^https?:\/\//i.test(input)) return input
+  const base = String(BASE || '').replace(/\/$/, '')
+  let path = String(input || '')
+  // Remove leading slashes
+  path = path.replace(/^\/+/, '')
+  // If consumer passed '/api/v1/...', strip the prefix to avoid double base
+  path = path.replace(/^api\/v1\/?/, '')
+  path = path.replace(/^v1\/?/, '')
+  return `${base}/${path}`
+}
+
 async function tryRefreshToken(): Promise<boolean> {
   try {
     const refresh = localStorage.getItem('refresh_token')
     if (!refresh) return false
-    const r = await fetch('/api/v1/auth/refresh', {
+    const r = await fetch(joinUrl('/auth/refresh'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token: refresh }),
@@ -24,7 +44,8 @@ async function request<T>(url: string, init?: RequestInit, _retried = false): Pr
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
 
-  const res = await fetch(url, { ...init, headers: { ...headers, ...(init?.headers as any) } })
+  const finalUrl = joinUrl(url)
+  const res = await fetch(finalUrl, { ...init, headers: { ...headers, ...(init?.headers as any) } })
   if (res.status === 401 && !_retried) {
     const refreshed = await tryRefreshToken()
     if (refreshed) {

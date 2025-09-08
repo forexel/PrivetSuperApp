@@ -4,34 +4,9 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useNavigate, Link } from 'react-router-dom'
+import { api } from '../../shared/api'
 
-// lightweight fetch client with auth header
-const api = {
-  async post<T = any>(url: string, body: any): Promise<{ data: T }> {
-    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('access_token') : null
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify(body ?? {}),
-    })
-    if (!r.ok) {
-      let data: any = null
-      try {
-        data = await r.json()
-      } catch {
-        // no json in body
-      }
-      const err: any = new Error(`HTTP ${r.status}`)
-      err.status = r.status
-      err.response = { status: r.status, data }
-      throw err
-    }
-    return { data: (await r.json()) as T }
-  },
-}
+// use shared api with BASE from env
 
 // === phone helpers ===
 const onlyDigits = (s: string) => s.replace(/\D/g, '')
@@ -116,14 +91,17 @@ export function RegisterPage() {
     const payload = { name: data.name, email: data.email, phone: digits, password: data.password }
     try {
       // регистрируем
-      await api.post('/api/v1/auth/register', payload)
+      await api.post('/auth/register', payload)
       // логинимся сразу после регистрации
-      const loginResp = await api.post('/api/v1/auth/login', {
-        phone: digits,
-        password: data.password,
-      })
-      const token = (loginResp as any)?.data?.access_token || (loginResp as any)?.data?.token || (loginResp as any)?.data?.accessToken
-      const refresh = (loginResp as any)?.data?.refresh_token
+      const loginResp = await api.post<{ access_token?: string; token?: string; accessToken?: string; refresh_token?: string }>(
+        '/auth/login',
+        {
+          phone: digits,
+          password: data.password,
+        }
+      )
+      const token = loginResp?.access_token || (loginResp as any)?.token || (loginResp as any)?.accessToken
+      const refresh = loginResp?.refresh_token
       if (!token) throw new Error('Нет access_token в ответе')
       try {
         localStorage.setItem('access_token', token)

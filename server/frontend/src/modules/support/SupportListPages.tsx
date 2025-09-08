@@ -31,7 +31,7 @@ export function SupportListPage() {
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['support', 'my'],
-    queryFn: () => api.get<SupportItem[]>('/api/v1/support/'),
+    queryFn: () => api.get<SupportItem[]>('/support/'),
     retry: false,
   })
 

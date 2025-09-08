@@ -28,11 +28,11 @@ export function SupportCreatePage() {
 
   const createSupport = async (payload: FormValues) => {
     // 1) создаём тикет
-    const created = await api.post<CreatedSupport>('/api/v1/support/', { subject: payload.subject })
+    const created = await api.post<CreatedSupport>('/support/', { subject: payload.subject })
 
     // 2) если пользователь ввёл текст — добавим сообщение от пользователя
     if (payload.text?.trim()) {
-      await api.post(`/api/v1/support/${created.id}/messages/user`, { body: payload.text })
+      await api.post(`/support/${created.id}/messages/user`, { body: payload.text })
     }
 
     return created

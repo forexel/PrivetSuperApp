@@ -31,7 +31,7 @@ export function TicketCreatePage() {
     created_at: string
   }
   const createTicket = async (payload: FormValues) => {
-    const created = await api.post<CreatedTicket>('/api/v1/tickets/', payload)
+    const created = await api.post<CreatedTicket>('/tickets/', payload)
     return created
   }
 

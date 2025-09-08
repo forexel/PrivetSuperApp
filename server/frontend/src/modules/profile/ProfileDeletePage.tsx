@@ -12,7 +12,7 @@ export default function ProfileDeletePage() {
     setErr('')
     try {
       setBusy(true)
-      await api.del<null>('/api/v1/user')
+      await api.del<null>('/user')
       try { localStorage.removeItem('access_token'); localStorage.removeItem('refresh_token') } catch {}
       navigate('/login', { replace: true })
     } catch (e: any) {
@@ -42,4 +42,3 @@ export default function ProfileDeletePage() {
     </div>
   )
 }
-

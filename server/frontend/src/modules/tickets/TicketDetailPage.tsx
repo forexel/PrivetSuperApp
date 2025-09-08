@@ -34,7 +34,7 @@ export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { data, isLoading, isError } = useQuery({
     queryKey: ['ticket', id],
-    queryFn: () => api.get<TicketDetail>(`/api/v1/tickets/${id}`),
+    queryFn: () => api.get<TicketDetail>(`/tickets/${id}`),
     enabled: !!id,
   })
 

@@ -49,7 +49,7 @@ export function ProfilePage() {
     let mounted = true
     ;(async () => {
       try {
-        const data = await api.get<Me>('/api/v1/user/me')
+        const data = await api.get<Me>('/user/me')
         if (!mounted) return
         setMe(data)
         setNameValue(data?.name || '')
@@ -57,7 +57,7 @@ export function ProfilePage() {
         // подтянем активную подписку параллельно
         try {
           const sub = await api.get<{ plan?: string|null; period?: string|null; paid_until?: string|null }>(
-            '/api/v1/subscriptions/active'
+            '/subscriptions/active'
           )
           if (mounted) setActiveSub(sub)
         } catch {}
@@ -83,7 +83,7 @@ export function ProfilePage() {
   const saveProfile = async (payload: Partial<Pick<Me, 'name' | 'email'>>) => {
     try {
       setSaving(true)
-      const updated = await api.put<Me>('/api/v1/user', payload as any)
+      const updated = await api.put<Me>('/user', payload as any)
       setMe(updated)
       setNameValue(updated?.name || '')
       setEmailValue(updated?.email || '')
@@ -99,7 +99,7 @@ export function ProfilePage() {
   const changePassword = async () => {
     try {
       setSaving(true)
-      await api.post<null>('/api/v1/user/change-password', { old_password: oldPwd, new_password: newPwd } as any)
+      await api.post<null>('/user/change-password', { old_password: oldPwd, new_password: newPwd } as any)
       setEditPwd(false)
       setOldPwd('')
       setNewPwd('')
