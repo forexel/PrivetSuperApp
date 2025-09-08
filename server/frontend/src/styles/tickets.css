@@ -171,7 +171,8 @@
 /* Header with back button */
 .page-header{ position:relative; display:flex; align-items:center; justify-content:center; min-height:32px; padding-top: max(0px, env(safe-area-inset-top)); }
 .page-header .page-title{ margin:0; text-align:center; width:100%; }
-.back-btn{ position:absolute; left:0; top:50%; transform:translateY(-50%); background:transparent; border:0; font-size:20px; line-height:1; cursor:pointer; color:#111827; padding:4px 6px; border-radius:8px }
+.back-btn{ position:absolute; left:0; top:50%; transform:translateY(-50%); background:transparent; border:0; font-size:0; line-height:1; cursor:pointer; color:#111827; padding:0; border-radius:8px; display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px }
+.back-btn::before{ content:""; display:block; width:12px; height:12px; border-left:3px solid #111827; border-bottom:3px solid #111827; transform: rotate(45deg); }
 .back-btn:focus{ outline:none }
 .back-btn:focus-visible{ outline:2px solid #cbd5e1; outline-offset:2px }
 
@@ -186,9 +187,7 @@
   width: 100%;
   max-width: var(--content-max);
   margin: 0 auto;
-  padding: 16px 20px 24px;
-  /* Чтобы заголовок не заезжал под челку/статус-бар */
-  padding-top: max(16px, calc(env(safe-area-inset-top) + 8px));
+  padding: 12px 20px 24px; /* компактнее сверху; safe-area учтён в .page-header */
   box-sizing: border-box;
 }
 
@@ -233,6 +232,7 @@
   margin-right: auto;
   padding-left: 20px;
   padding-right: 20px;
+  padding-top: 8px; /* не дублируем safe-area: он в .page-header */
 }
 
 /* Ensure chat input field spans full width inside sticky area */
@@ -262,3 +262,6 @@
   min-height: 100dvh; /* fill the viewport height */
 }
 .chat-input{ margin-top: auto; }
+
+/* Читаемость текста в пузырях (явный цвет для WebView) */
+.bubble{ color: var(--text-dark, #111827); }

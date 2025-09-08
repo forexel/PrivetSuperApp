@@ -10,7 +10,7 @@
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 16px 0 8px;
+  padding: 0 0 8px; /* верх подгоняем контейнером страницы */
 }
 
 .profile-avatar {
@@ -106,7 +106,11 @@
 }
 
 /* Добавим нижний зазор, чтобы кнопки/ссылка удаления не прятались за меню; уменьшили отступ */
-.dashboard.profile { padding-bottom: calc(8px + var(--nav-h) + env(safe-area-inset-bottom)); }
+.dashboard.profile {
+  /* 4px от верхней «чёлки» до аватара */
+  padding-top: calc(env(safe-area-inset-top) + 4px) !important;
+  padding-bottom: calc(8px + var(--nav-h) + env(safe-area-inset-bottom));
+}
 
 /* Ссылка «Удалить аккаунт» */
 .profile-danger {
