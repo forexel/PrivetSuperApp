@@ -17,7 +17,8 @@ export default function App() {
     pathname.startsWith('/tickets/') || // деталка заявки мастера
     pathname.startsWith('/support/new') ||
     pathname.startsWith('/support/success') ||
-    pathname.startsWith('/support/')     // деталка обращения
+    pathname.startsWith('/support/') ||    // деталка обращения
+    pathname.startsWith('/profile/delete') // экран удаления аккаунта
   )
 
   return (

@@ -10,17 +10,6 @@ body {
   padding-top: env(safe-area-inset-top);
 }          /* вместо 100vh — корректно на мобилках */
 
-/* ВРЕМЕННЫЙ МАЯК — УДАЛИТЬ ПОТОМ */
-body::before {
-  content: "DEPLOY TEST: 2025-09-08 15:05";
-  display: block;
-  background: #ffeb3b;
-  color: #000;
-  font-weight: 700;
-  padding: 8px 12px;
-  text-align: center;
-}
-
 body{
   display: block;       /* было display:flex — мешало */
   place-items: initial; /* отключаем центровку body */
@@ -48,6 +37,10 @@ body{
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
+}
+/* Если внутри пустой экран (.empty-state) — отключаем прокрутку контейнера, чтобы не «подпрыгивал» */
+.app-content:has(.empty-state){
+  overflow-y: hidden;
 }
 
 /* Без нижнего меню: используем всю высоту и убираем подложку */
