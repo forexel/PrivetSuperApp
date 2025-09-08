@@ -6,8 +6,11 @@
   max-width: var(--content-max);
   margin-inline: auto;         /* центр по горизонтали */
   padding: 12px 20px 24px;
+  /* учитываем вырезы/статус-бар (Android/iOS) */
+  padding-top: max(12px, calc(env(safe-area-inset-top) + 8px));
   box-sizing: border-box;      /* чтобы padding входил в ширину */
-  padding-bottom: calc(24px + var(--nav-h)); /* чтобы список не прятался под меню */
+  /* чтобы список не прятался под меню/жестовую панель */
+  padding-bottom: calc(24px + var(--nav-h) + env(safe-area-inset-bottom));
 }
 
 /* заголовок */

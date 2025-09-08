@@ -64,7 +64,8 @@ body{
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  padding: 28px 20px calc(env(safe-area-inset-bottom) + 20px); /* подняли форму и текст выше */
+  /* Учитываем верхний вырез/статус-бар и нижнюю жестовую панель */
+  padding: calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + 20px);
   background: var(--auth-bg);
   box-sizing: border-box;
   overflow-y: auto;
@@ -154,4 +155,3 @@ html, body, input, textarea, button, select {
   width: 100%;
   min-width: 0;  /* чтобы flex не сжимал/не давал минималки */
 }
-
