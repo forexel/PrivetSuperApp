@@ -102,7 +102,7 @@
   max-width: var(--content-max);  /* 375 / 390 / 414 / 430 по медиаправилам */
   margin: 0 auto;                 /* по центру */
   min-height: var(--nav-h);
-  padding: 2px 0 max(2px, env(safe-area-inset-bottom));
+  padding: 2px 0 calc(max(2px, env(safe-area-inset-bottom)) + var(--vvb, 0px));
   display: flex;
   justify-content: space-around;
   align-items: center;

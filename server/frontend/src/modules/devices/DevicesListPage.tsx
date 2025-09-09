@@ -34,7 +34,7 @@ export function DevicesListPage() {
       {!isLoading && !error && (data ?? []).length === 0 && (
         <div className="empty-state">
           <div className="empty-box">
-            <div className="empty-title">Пока тут пусто</div>
+            <div className="empty-title">Пока тут пусто.</div>
             <div className="empty-text">
               Тут появятся ваши устройства, когда их зарегистрируем
             </div>

@@ -32,7 +32,18 @@ import SubscriptionDenied from './modules/home/SubscritionDenied'
 // PWA: регистрируем SW только в production, чтобы не ломать dev
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      // Попросим браузер проверить обновление сразу
+      try { reg.update() } catch {}
+      // Авто-обновление вкладки после активации нового SW
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        // Перезагрузим один раз
+        if (!(window as any).__swReloader) {
+          (window as any).__swReloader = true
+          location.reload()
+        }
+      })
+    }).catch(() => {})
   })
 }
 
@@ -78,6 +89,22 @@ const router = createBrowserRouter([
 ])
 
 const qc = new QueryClient()
+
+// Runtime учёт нижней системной панели (например, Galaxy Fold)
+function applyViewportInsets() {
+  const vv = (window as any).visualViewport
+  let extraBottom = 0
+  if (vv && typeof vv.height === 'number') {
+    // разница между layout viewport и visual viewport — это нижняя системная панель/клавиатура
+    const delta = Math.max(0, Math.round(window.innerHeight - vv.height))
+    extraBottom = delta
+  }
+  document.documentElement.style.setProperty('--vvb', extraBottom + 'px')
+}
+applyViewportInsets()
+window.addEventListener('resize', applyViewportInsets)
+;(window as any).visualViewport?.addEventListener?.('resize', applyViewportInsets)
+window.addEventListener('orientationchange', () => setTimeout(applyViewportInsets, 50))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <QueryClientProvider client={qc}>

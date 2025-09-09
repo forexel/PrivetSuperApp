@@ -29,11 +29,11 @@ body{
   justify-content: center;
   align-items: flex-start;
   width: 100%;
-  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--vvb, 0px));
   background: #fff;  /* важно: чтобы под меню не виднелся .page-blue */
   /* фиксируем высоту области контента = высоте окна минус нижнее меню,
      чтобы внутренние страницы прокручивались при переполнении и не уезжали под меню */
-  height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom));
+  height: calc(100dvh - var(--nav-h) - env(safe-area-inset-bottom) - var(--vvb, 0px));
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
@@ -69,7 +69,7 @@ body{
   align-items: center;
   justify-content: flex-start;
   /* Учитываем верхний вырез/статус-бар и нижнюю жестовую панель */
-  padding: calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + 20px);
+  padding: calc(env(safe-area-inset-top) + 28px) 20px calc(env(safe-area-inset-bottom) + var(--vvb, 0px) + 20px);
   background: var(--auth-bg);
   box-sizing: border-box;
   overflow-y: auto;

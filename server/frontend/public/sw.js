@@ -1,42 +1,69 @@
-const CACHE_NAME = 'privet-cache-v2'; // bump версии при выкладке
-const URLS_TO_CACHE = ['/', '/index.html'];
+const VERSION = 'v3';
+const RUNTIME = `privet-runtime-${VERSION}`;
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (e) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
-  );
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    Promise.all([
-      caches.keys().then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-      ),
-      self.clients.claim()
-    ])
-  );
+self.addEventListener('activate', (e) => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== RUNTIME).map((k) => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
+
+function isSameOrigin(url) {
+  try { const u = new URL(url); return u.origin === self.location.origin; } catch { return true; }
+}
 
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
+  const req = event.request;
+  const url = new URL(req.url);
 
-  // НЕ кэшируем API и не-GET
-  if (request.method !== 'GET' || new URL(request.url).pathname.startsWith('/api/')) {
-    return; // по умолчанию — сеть
+  // Не кэшируем API и не-GET
+  if (req.method !== 'GET' || (isSameOrigin(req.url) && url.pathname.startsWith('/api/'))) {
+    return; // сеть по умолчанию
   }
 
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      if (cached) return cached;
-      return fetch(request).then((response) => {
-        if (response && response.status === 200 && response.type === 'basic') {
-          const respClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, respClone));
-        }
-        return response;
-      }).catch(() => caches.match('/index.html'));
-    })
-  );
+  // HTML (навигация) — network-first, чтобы видеть обновления без очистки кэша
+  const isHTML = req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html');
+  if (isHTML) {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(req, { cache: 'no-store' });
+        const cache = await caches.open(RUNTIME);
+        cache.put(req, fresh.clone()).catch(() => {});
+        return fresh;
+      } catch {
+        const cached = await caches.match(req);
+        return cached || caches.match('/index.html');
+      }
+    })());
+    return;
+  }
+
+  // Ассеты из /assets — stale-while-revalidate
+  if (isSameOrigin(req.url) && url.pathname.startsWith('/assets/')) {
+    event.respondWith((async () => {
+      const cache = await caches.open(RUNTIME);
+      const cached = await cache.match(req);
+      const fetchPromise = fetch(req).then((resp) => {
+        if (resp && resp.status === 200) cache.put(req, resp.clone()).catch(() => {});
+        return resp;
+      }).catch(() => cached);
+      return cached || fetchPromise;
+    })());
+    return;
+  }
+
+  // Остальное — сеть с фолбэком на кэш (например, иконки)
+  event.respondWith((async () => {
+    try {
+      return await fetch(req);
+    } catch {
+      const cached = await caches.match(req);
+      return cached || Response.error();
+    }
+  })());
 });
