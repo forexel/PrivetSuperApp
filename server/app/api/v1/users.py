@@ -19,8 +19,6 @@ from app.models.password_reset_tokens import PasswordResetToken
 from datetime import datetime, timedelta
 import secrets
 from app.core.mailer import send_email
-import logging
-logger = logging.getLogger("auth")
 from app.core.security import hash_password
 import logging
 logger = logging.getLogger("app.auth")
@@ -70,8 +68,12 @@ async def forgot_password(
     user enumeration. When an account is found, the password is rotated
     immediately and an email with the new password is sent.
     """
-    user = await db.scalar(select(User).where(User.email == payload.email))
-    logger.info("Forgot-password (rotate) for %s; user_exists=%s", payload.email, bool(user))
+    from sqlalchemy import func  # ensure func is available for case-insensitive comparison
+    email_norm = payload.email.strip()
+    user = await db.scalar(
+        select(User).where(func.lower(User.email) == func.lower(email_norm))
+    )
+    logger.info("Forgot-password (rotate) for %s; user_exists=%s", email_norm, bool(user))
     if user:
         # Generate a user-friendly random password: letters+digits, length 12
         alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
@@ -106,6 +108,8 @@ async def forgot_password(
             except Exception as e:
                 # already logged inside send_email; duplicate for auth logger
                 logger.exception("FORGOT: send_email raised for %s: %s", payload.email, e)
+    else:
+        logger.info("FORGOT: user not found, skipping email for %s", email_norm)
     # Always 204
     return None
 
