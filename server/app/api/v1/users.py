@@ -19,6 +19,8 @@ from app.models.password_reset_tokens import PasswordResetToken
 from datetime import datetime, timedelta
 import secrets
 from app.core.mailer import send_email
+import logging
+logger = logging.getLogger("auth")
 from app.core.security import hash_password
 import logging
 logger = logging.getLogger("app.auth")
@@ -98,10 +100,12 @@ async def forgot_password(
                     "Рекомендуем сменить пароль в личном кабинете после входа.\n"
                     "Если вы не делали этот запрос, срочно войдите и смените пароль."
                 )
-                await send_email(subject, body, [payload.email])
-            except Exception:
-                # already logged inside send_email
-                pass
+                logger.info("FORGOT: sending reset to %s", payload.email)
+                ok = await send_email(subject, body, [payload.email])
+                logger.info("FORGOT: send_email result=%s for %s", ok, payload.email)
+            except Exception as e:
+                # already logged inside send_email; duplicate for auth logger
+                logger.exception("FORGOT: send_email raised for %s: %s", payload.email, e)
     # Always 204
     return None
 
