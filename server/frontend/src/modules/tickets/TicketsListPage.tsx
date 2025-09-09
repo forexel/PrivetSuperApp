@@ -52,7 +52,7 @@ export function TicketsListPage() {
       {!isLoading && !error && (data ?? []).length === 0 && (
         <div className="empty-state">
           <div className="empty-box">
-            <div className="empty-title">Пока тут пусто.</div>
+            <div className="empty-title">Пока тут пусто</div>
             <div className="empty-text">Вы пока не вызывали мастера</div>
           </div>
         </div>
