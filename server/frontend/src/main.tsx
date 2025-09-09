@@ -32,7 +32,9 @@ import SubscriptionDenied from './modules/home/SubscritionDenied'
 // PWA: регистрируем SW только в production, чтобы не ломать dev
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').then((reg) => {
+    const ver = (import.meta.env as any).VITE_APP_VERSION || (import.meta.env as any).VITE_GIT_SHA || ''
+    const swUrl = `/sw.js${ver ? `?v=${encodeURIComponent(ver)}` : ''}`
+    navigator.serviceWorker.register(swUrl, { updateViaCache: 'none' as any }).then((reg) => {
       // Попросим браузер проверить обновление сразу
       try { reg.update() } catch {}
       // Авто-обновление вкладки после активации нового SW
