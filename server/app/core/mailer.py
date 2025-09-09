@@ -7,7 +7,6 @@ from typing import Iterable
 
 from app.core.config import settings
 import logging
-import smtplib
 
 logger = logging.getLogger("app.mailer")
 
@@ -64,6 +63,7 @@ def _send_sync(msg: EmailMessage) -> None:
             logger.info("SMTP try PLAIN %s:%s", host, port)
             tried.append(f"plain:{port}")
             with smtplib.SMTP(host, port, timeout=30) as s:
+                s.ehlo()
                 if user and password:
                     s.login(user, password)
                 s.send_message(msg)
@@ -85,16 +85,21 @@ def _send_sync(msg: EmailMessage) -> None:
             raise
 
 
-async def send_email(subject: str, body_text: str, to: Iterable[str]) -> None:
+async def send_email(subject: str, body_text: str, to: Iterable[str]) -> bool:
     """Send email using standard library in a thread executor.
 
-    No-op if SMTP is not configured.
+    Returns True on success, False on failure. No-op (False) if SMTP is not configured.
     """
     msg = _build_message(subject, body_text, to)
-    logger.info("Sending email via SMTP host=%s port=%s to=%s (TLS=%s SSL=%s)", settings.SMTP_HOST, settings.SMTP_PORT, list(to), settings.SMTP_TLS, getattr(settings, 'SMTP_SSL', False))
+    logger.info(
+        "Sending email via SMTP host=%s port=%s to=%s (TLS=%s SSL=%s)",
+        settings.SMTP_HOST, settings.SMTP_PORT, list(to), settings.SMTP_TLS, getattr(settings, 'SMTP_SSL', False)
+    )
     try:
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, _send_sync, msg)
         logger.info("Email sent to %s", list(to))
+        return True
     except Exception as e:
         logger.exception("Email sending failed: %s", e)
+        return False

@@ -94,18 +94,18 @@ const qc = new QueryClient()
 
 // Runtime учёт нижней системной панели (например, Galaxy Fold)
 function applyViewportInsets() {
-  const vv = (window as any).visualViewport
-  let extraBottom = 0
-  if (vv && typeof vv.height === 'number') {
-    // разница между layout viewport и visual viewport — это нижняя системная панель/клавиатура
-    const delta = Math.max(0, Math.round(window.innerHeight - vv.height))
-    extraBottom = delta
-  }
-  document.documentElement.style.setProperty('--vvb', extraBottom + 'px')
+  const vv: any = (window as any).visualViewport
+  const ih = window.innerHeight || 0
+  const vh = vv?.height || ih
+  const off = vv?.offsetTop || 0
+  // нижняя панель/клавиатура/жестовая подсказка
+  const bottomInset = Math.max(0, Math.round(ih - vh - off))
+  document.documentElement.style.setProperty('--vvb', bottomInset + 'px')
 }
 applyViewportInsets()
 window.addEventListener('resize', applyViewportInsets)
 ;(window as any).visualViewport?.addEventListener?.('resize', applyViewportInsets)
+;(window as any).visualViewport?.addEventListener?.('scroll', applyViewportInsets)
 window.addEventListener('orientationchange', () => setTimeout(applyViewportInsets, 50))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

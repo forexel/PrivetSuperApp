@@ -10,6 +10,17 @@ body {
   padding-top: env(safe-area-inset-top);
 }          /* вместо 100vh — корректно на мобилках */
 
+/* Покрас статуса/системной панели под брендовый цвет */
+body::before{
+  content: '';
+  position: fixed;
+  left: 0; right: 0; top: 0;
+  height: env(safe-area-inset-top);
+  background: var(--auth-bg, #3E8BBF);
+  z-index: 2000; /* над контентом, ниже плавающих кнопок */
+  pointer-events: none;
+}
+
 body{
   display: block;       /* было display:flex — мешало */
   place-items: initial; /* отключаем центровку body */
