@@ -1,12 +1,19 @@
 from pathlib import Path
 import logging
 
-# Increase log verbosity for auth + mailer to troubleshoot email/forgot flow
-for _name in ("auth", "app.auth", "mailer", "app.mailer"):
-    try:
-        logging.getLogger(_name).setLevel(logging.INFO)
-    except Exception:
-        pass
+# --- Logging bootstrap ---
+# Подними корневой уровень, чтобы info попадали в journalctl
+logging.getLogger().setLevel(logging.INFO)
+
+# Наши именованные логгеры
+logging.getLogger("app.auth").setLevel(logging.INFO)
+logging.getLogger("mailer").setLevel(logging.INFO)
+
+# На всякий: убедимся, что сообщения уходят вверх
+logging.getLogger("app.auth").propagate = True
+logging.getLogger("mailer").propagate = True
+
+logging.info("BOOT: logging configured (root=INFO)")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse, Response
