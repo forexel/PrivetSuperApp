@@ -1,4 +1,12 @@
 from pathlib import Path
+import logging
+
+# Increase log verbosity for auth + mailer to troubleshoot email/forgot flow
+for _name in ("auth", "app.auth", "mailer", "app.mailer"):
+    try:
+        logging.getLogger(_name).setLevel(logging.INFO)
+    except Exception:
+        pass
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, FileResponse, Response
