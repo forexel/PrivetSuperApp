@@ -95,15 +95,32 @@ async def forgot_password(
         else:
             # Send email with the new password
             try:
-                subject = "Ваш новый пароль"
+                subject = "Восстановление доступа к PrivetSuper"
+                base = settings.APP_BASE_URL or "https://privetsuper.ru"
+                login_url = f"{base.rstrip('/')}/login"
+                # Plain
                 body = (
-                    "Вы запросили восстановление пароля.\n\n"
-                    f"Новый пароль: {new_password}\n\n"
-                    "Рекомендуем сменить пароль в личном кабинете после входа.\n"
-                    "Если вы не делали этот запрос, срочно войдите и смените пароль."
+                    "Вы запросили восстановление пароля в PrivetSuper.\n\n"
+                    f"Ваш новый пароль: {new_password}\n\n"
+                    f"Войти: {login_url}\n\n"
+                    "Рекомендуем поменять пароль в профиле после входа. Если вы не делали этот запрос, просто игнорируйте письмо."
                 )
+                # HTML
+                html = f"""
+                <div style=\"font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#111827\">
+                  <h2 style=\"margin:0 0 12px; color:#3E8BBF\">Восстановление доступа</h2>
+                  <p style=\"margin:0 0 12px\">Вы запросили восстановление пароля в PrivetSuper.</p>
+                  <p style=\"margin:0 0 12px\"><strong>Новый пароль:</strong> <code style=\"background:#F3F4F6;padding:2px 6px;border-radius:6px\">{new_password}</code></p>
+                  <p style=\"margin:0 0 16px\">Рекомендуем сменить пароль в профиле после входа.</p>
+                  <p style=\"margin:0 0 16px\">
+                    <a href=\"{login_url}\" style=\"display:inline-block;background:#3E8BBF;color:#fff;text-decoration:none;padding:10px 16px;border-radius:9999px;font-weight:700\">Войти в приложение</a>
+                  </p>
+                  <p style=\"margin:0 0 8px;color:#6B7280\">Если кнопка не работает, скопируйте ссылку и откройте в браузере:</p>
+                  <p style=\"margin:0;word-break:break-all;color:#1F2937\"><a href=\"{login_url}\" style=\"color:#1F2937\">{login_url}</a></p>
+                </div>
+                """
                 logger.info("FORGOT: sending reset to %s", payload.email)
-                ok = await send_email(subject, body, [payload.email])
+                ok = await send_email(subject, body, [payload.email], html_body=html)
                 logger.info("FORGOT: send_email result=%s for %s", ok, payload.email)
             except Exception as e:
                 # already logged inside send_email; duplicate for auth logger

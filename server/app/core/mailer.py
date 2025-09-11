@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import smtplib
 from email.message import EmailMessage
+from email.utils import formataddr
 from typing import Iterable
 
 from app.core.config import settings
@@ -11,12 +12,18 @@ import logging
 logger = logging.getLogger("app.mailer")
 
 
-def _build_message(subject: str, body_text: str, to: Iterable[str]) -> EmailMessage:
+def _build_message(subject: str, body_text: str, to: Iterable[str], html_body: str | None = None) -> EmailMessage:
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = settings.SMTP_FROM or settings.SMTP_USER or "no-reply@example.com"
+    from_addr = settings.SMTP_FROM or settings.SMTP_USER or "no-reply@example.com"
+    from_name = (settings.SMTP_FROM_NAME or "PrivetSuper").strip()
+    msg["From"] = formataddr((from_name, from_addr))
     msg["To"] = ", ".join(to)
-    msg.set_content(body_text)
+    # Plain text (always)
+    msg.set_content(body_text or "")
+    # Optional HTML alternative
+    if html_body:
+        msg.add_alternative(html_body, subtype="html")
     return msg
 
 
@@ -85,12 +92,12 @@ def _send_sync(msg: EmailMessage) -> None:
             raise
 
 
-async def send_email(subject: str, body_text: str, to: Iterable[str]) -> bool:
+async def send_email(subject: str, body_text: str, to: Iterable[str], html_body: str | None = None) -> bool:
     """Send email using standard library in a thread executor.
 
     Returns True on success, False on failure. No-op (False) if SMTP is not configured.
     """
-    msg = _build_message(subject, body_text, to)
+    msg = _build_message(subject, body_text, to, html_body)
     logger.info(
         "Sending email via SMTP host=%s port=%s to=%s (TLS=%s SSL=%s)",
         settings.SMTP_HOST, settings.SMTP_PORT, list(to), settings.SMTP_TLS, getattr(settings, 'SMTP_SSL', False)

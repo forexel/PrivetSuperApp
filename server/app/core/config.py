@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_FROM: str | None = None
+    SMTP_FROM_NAME: str | None = "PrivetSuper"
     # Public base URL for links in emails (optional)
     APP_BASE_URL: str | None = None
 
