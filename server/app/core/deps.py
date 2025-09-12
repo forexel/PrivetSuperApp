@@ -4,6 +4,7 @@ import base64
 import binascii
 from typing import Annotated, Optional
 from fastapi import Depends, HTTPException, Request, status
+import logging, uuid
 
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
@@ -33,7 +34,8 @@ async def get_current_user(
         token = creds.credentials
         try:
             payload = decode_jwt_token(token)
-        except Exception:
+        except Exception as e:
+            log.warning("ME token_invalid id=%s ip=%s reason=%s", req_id, ip, type(e).__name__)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token",
@@ -41,6 +43,7 @@ async def get_current_user(
             )
         sub = payload.get("sub")
         if not sub:
+            log.warning("ME token_bad_payload id=%s ip=%s", req_id, ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token payload",
@@ -51,11 +54,13 @@ async def get_current_user(
         if user is None:
             user = await db.scalar(select(User).where(User.phone == str(sub)))
         if not user:
+            log.warning("ME user_not_found id=%s ip=%s sub=%s", req_id, ip, sub)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+        log.info("ME ok id=%s ip=%s user_id=%s", req_id, ip, user.id)
         return user
 
     # Fallback: Basic (username=phone, password)
@@ -65,12 +70,14 @@ async def get_current_user(
         try:
             raw = base64.b64decode(b64).decode("utf-8")
         except (binascii.Error, UnicodeDecodeError):
+            log.warning("ME basic_invalid_b64 id=%s ip=%s", req_id, ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Basic auth header",
                 headers={"WWW-Authenticate": "Basic"},
             )
         if ":" not in raw:
+            log.warning("ME basic_invalid_format id=%s ip=%s", req_id, ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid Basic credentials",
@@ -80,17 +87,23 @@ async def get_current_user(
         service = UserService(db)
         user = await service.authenticate(phone, password)
         if not user:
+            log.warning("ME basic_bad_credentials id=%s ip=%s", req_id, ip)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid credentials",
                 headers={"WWW-Authenticate": "Basic"},
             )
+        log.info("ME ok_basic id=%s ip=%s user_id=%s", req_id, ip, user.id)
         return user
 
     # No acceptable Authorization
+    log.warning("ME missing_auth id=%s ip=%s", req_id, ip)
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Missing Authorization header",
+    log = logging.getLogger("app.auth")
+    req_id = request.headers.get('x-request-id') or str(uuid.uuid4())[:8]
+    ip = request.client.host if request.client else "-"
         headers={"WWW-Authenticate": "Bearer, Basic"},
     )
 

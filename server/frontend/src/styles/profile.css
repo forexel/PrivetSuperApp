@@ -83,6 +83,7 @@
   padding: 6px;
   border-radius: 8px;
   cursor: pointer;
+  flex: 0 0 auto;              /* не сжимать в узких контейнерах */
 }
 
 .info-edit img {
@@ -140,6 +141,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 28px;              /* фиксированная ширина = высоте */
+  min-width: 28px;             /* защита от сжатия в grid/flex */
+  aspect-ratio: 1 / 1;         /* круглая форма на всех разрешениях */
+  box-sizing: border-box;
+  overflow: hidden;            /* отсекаем артефакты скругления */
 }
 .info-edit.icon-round.accept { background: rgba(16, 185, 129, 0.15); }
 .info-edit.icon-round.cancel { background: rgba(239, 68, 68, 0.15); }

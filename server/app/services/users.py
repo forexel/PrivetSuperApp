@@ -1,6 +1,7 @@
 from datetime import datetime
 import uuid
 from sqlalchemy import select
+import logging, time
 from sqlalchemy.exc import IntegrityError
 
 from app.core.security import hash_password, verify_password
@@ -9,6 +10,9 @@ from app.services.base import BaseService
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
+
+auth_logger = logging.getLogger("app.auth")
+
 
 class UserService(BaseService):
     async def create(self, phone: str, password: str, name: str = None, email: str = None) -> User:
@@ -52,9 +56,13 @@ class UserService(BaseService):
             raise ValueError("Registration failed")
 
     async def authenticate(self, phone: str, password: str) -> User | None:
+        t0 = time.perf_counter()
+        phone10 = (phone or "").strip()
+        auth_logger.debug("AUTH find_user phone=%s", phone10[:-2] + "**" if len(phone10) >= 2 else phone10)
         # Find user strictly by phone (no status filter in SQL)
-        user = await self.db.scalar(select(User).where(User.phone == phone))
+        user = await self.db.scalar(select(User).where(User.phone == phone10))
         if not user:
+            auth_logger.info("AUTH user_not_found phone=%s dur_ms=%s", phone10[:-2] + "**", int((time.perf_counter()-t0)*1000))
             return None
 
         # Normalize status value (support Enum or raw string from DB)
@@ -64,10 +72,16 @@ class UserService(BaseService):
         # Allow login for any status EXCEPT explicitly forbidden ones
         # e.g., 'deleted' or 'blocked'. 'gost' (guest) is allowed.
         if raw_status in {"deleted", "blocked"}:
+            auth_logger.warning("AUTH locked status=%s user_id=%s", raw_status, user.id)
             return None
 
         # Verify password (argon2/bcrypt supported by core/security.py)
-        return user if verify_password(password, user.password_hash) else None
+        ok = bool(verify_password(password, user.password_hash))
+        if ok:
+            auth_logger.debug("AUTH password_match user_id=%s dur_ms=%s", user.id, int((time.perf_counter()-t0)*1000))
+            return user
+        auth_logger.info("AUTH password_mismatch user_id=%s dur_ms=%s", user.id, int((time.perf_counter()-t0)*1000))
+        return None
 
     async def get_by_id(self, user_id: uuid.UUID) -> User | None:
         return await self.db.get(User, user_id)

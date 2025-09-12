@@ -12,7 +12,13 @@ import logging
 logger = logging.getLogger("app.mailer")
 
 
-def _build_message(subject: str, body_text: str, to: Iterable[str], html_body: str | None = None) -> EmailMessage:
+def _build_message(
+    subject: str,
+    body_text: str,
+    to: Iterable[str],
+    html_body: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> EmailMessage:
     msg = EmailMessage()
     msg["Subject"] = subject
     from_addr = settings.SMTP_FROM or settings.SMTP_USER or "no-reply@example.com"
@@ -24,6 +30,11 @@ def _build_message(subject: str, body_text: str, to: Iterable[str], html_body: s
     # Optional HTML alternative
     if html_body:
         msg.add_alternative(html_body, subtype="html")
+    # Extra headers (Reply-To, List-Unsubscribe, etc.)
+    if headers:
+        for k, v in headers.items():
+            if v:
+                msg[k] = v
     return msg
 
 
@@ -92,12 +103,18 @@ def _send_sync(msg: EmailMessage) -> None:
             raise
 
 
-async def send_email(subject: str, body_text: str, to: Iterable[str], html_body: str | None = None) -> bool:
+async def send_email(
+    subject: str,
+    body_text: str,
+    to: Iterable[str],
+    html_body: str | None = None,
+    headers: dict[str, str] | None = None,
+) -> bool:
     """Send email using standard library in a thread executor.
 
     Returns True on success, False on failure. No-op (False) if SMTP is not configured.
     """
-    msg = _build_message(subject, body_text, to, html_body)
+    msg = _build_message(subject, body_text, to, html_body, headers)
     logger.info(
         "Sending email via SMTP host=%s port=%s to=%s (TLS=%s SSL=%s)",
         settings.SMTP_HOST, settings.SMTP_PORT, list(to), settings.SMTP_TLS, getattr(settings, 'SMTP_SSL', False)
