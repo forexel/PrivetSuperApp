@@ -74,6 +74,37 @@ async def forgot_password(
         select(User).where(func.lower(User.email) == func.lower(email_norm))
     )
     logger.info("Forgot-password (rotate) for %s; user_exists=%s", email_norm, bool(user))
+    # New secure flow: issue one-time token and email a reset link (avoid sending passwords)
+    if user:
+        try:
+            token = secrets.token_urlsafe(32)
+            expires_at = datetime.utcnow() + timedelta(minutes=30)
+            db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires_at))
+            await db.commit()
+        except Exception as e:
+            await db.rollback()
+            logger.exception("FORGOT: failed to persist token for user_id=%s: %s", user.id, e)
+        else:
+            try:
+                subject = "Восстановление доступа к PrivetSuper"
+                base = settings.APP_BASE_URL or "https://app.privetsuper.ru"
+                reset_url = f"{base.rstrip('/')}/reset?token={token}"
+                text = (
+                    "Вы запросили восстановление пароля для аккаунта в PrivetSuper.\n\n"
+                    "Чтобы задать новый пароль, перейдите по ссылке (она действительна 30 минут):\n\n"
+                    f"{reset_url}\n\n"
+                    "Если вы не запрашивали восстановление, просто игнорируйте это письмо.\n\n— Команда PrivetSuper"
+                )
+                html = f"""
+<!doctype html><html><body style=\"font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.5;color:#111827\">\n  <p>Вы запросили восстановление пароля для аккаунта в <strong>PrivetSuper</strong>.</p>\n  <p><a href=\"{reset_url}\" style=\"display:inline-block;padding:12px 18px;border-radius:9999px;background:#3E8BBF;color:#fff;text-decoration:none;font-weight:700\">Задать новый пароль</a></p>\n  <p>Ссылка действительна 30 минут. Если кнопка не работает, скопируйте ссылку:<br><a href=\"{reset_url}\">{reset_url}</a></p>\n  <p style=\"color:#6B7280\">Если вы не запрашивали восстановление, просто игнорируйте это письмо.</p>\n  <p>— Команда PrivetSuper</p>\n</body></html>
+                """
+                headers = {"Reply-To": "support@privetsuper.ru", "List-Unsubscribe": "<mailto:postmaster@privetsuper.ru>"}
+                logger.info("FORGOT: sending reset link to %s", email_norm)
+                ok = await send_email(subject, text, [email_norm], html_body=html, headers=headers)
+                logger.info("FORGOT: send_email result=%s for %s", ok, email_norm)
+            except Exception as e:
+                logger.exception("FORGOT: send_email raised for %s: %s", email_norm, e)
+        return None
     if user:
         # New flow: issue one-time reset link (TTL 30 minutes) — do NOT rotate password here
         try:
