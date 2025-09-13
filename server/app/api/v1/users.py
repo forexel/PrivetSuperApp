@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func
 from pydantic import BaseModel, EmailStr
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import secrets
 import logging
 
@@ -75,7 +75,7 @@ async def forgot_password(
         return None
 
     token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(minutes=30)
+    expires_at = datetime.now(timezone.utc) + timedelta(minutes=30)
     db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires_at))
     try:
         await db.commit()
@@ -115,17 +115,24 @@ async def reset_password(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     token = (payload.token or "").strip()
+    logger.info("RESET: attempt token_len=%s", len(token))
     if not token:
         raise HTTPException(status_code=400, detail="token is required")
     rec = await db.scalar(select(PasswordResetToken).where(PasswordResetToken.token == token))
-    if not rec or rec.used_at is not None or rec.expires_at < datetime.utcnow():
+    if not rec or rec.used_at is not None or rec.expires_at < datetime.now(timezone.utc):
+        logger.warning(
+            "RESET: invalid_or_expired token_found=%s used=%s expires_at=%s now=%s",
+            bool(rec), getattr(rec, 'used_at', None), getattr(rec, 'expires_at', None), datetime.utcnow()
+        )
         raise HTTPException(status_code=400, detail="invalid_or_expired_token")
     user = await db.get(User, rec.user_id)
     if not user:
+        logger.warning("RESET: user_not_found user_id=%s", rec.user_id)
         raise HTTPException(status_code=400, detail="user_not_found")
     user.password_hash = hash_password(payload.new_password)
     rec.used_at = datetime.utcnow()
     await db.commit()
+    logger.info("RESET: success user_id=%s", user.id)
     return None
 
 
@@ -234,4 +241,3 @@ async def delete_me(
     service = UserService(db)
     await service.delete(current_user)
     return None
-
