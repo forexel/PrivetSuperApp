@@ -12,6 +12,7 @@ import TicketSuccessPage from './modules/tickets/TicketSuccessPage'
 import TicketDetailPage from './modules/tickets/TicketDetailPage'
 import { HomePage } from './modules/home/HomePage'
 import { ForgotPasswordPage } from './modules/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from './modules/auth/ResetPasswordPage'
 import ForgotPasswordSuccessPage from './modules/auth/ForgotPasswordSuccessPage'
 import { RequireAuth } from './shared/auth/RequireAuth'
 import SupportListPages from './modules/support/SupportListPages'
@@ -60,6 +61,7 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
   { path: '/register', element: <RegisterPage /> },
   { path: '/forgot-password', element: <ForgotPasswordPage /> },
+  { path: '/reset', element: <ResetPasswordPage /> },
   { path: '/forgot-password/success', element: <ForgotPasswordSuccessPage /> },
   {
     path: '/',

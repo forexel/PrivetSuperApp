@@ -29,6 +29,11 @@ async def get_current_user(
     - Bearer JWT:  Authorization: Bearer <access_token>
     - Basic auth:  Authorization: Basic base64(phone:password)
     """
+    # init logging context
+    log = logging.getLogger("app.auth")
+    req_id = request.headers.get('x-request-id') or str(uuid.uuid4())[:8]
+    ip = request.client.host if request.client else "-"
+
     # Prefer Bearer if present
     if creds and (creds.scheme or "").lower() == "bearer":
         token = creds.credentials
@@ -101,9 +106,6 @@ async def get_current_user(
     raise HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Missing Authorization header",
-    log = logging.getLogger("app.auth")
-    req_id = request.headers.get('x-request-id') or str(uuid.uuid4())[:8]
-    ip = request.client.host if request.client else "-"
         headers={"WWW-Authenticate": "Bearer, Basic"},
     )
 
