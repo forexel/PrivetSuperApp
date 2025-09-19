@@ -1,308 +1,139 @@
--- =============================================================
--- NOTE: REFERENCE-ONLY SCHEMA SNAPSHOT
--- This project uses Alembic migrations in ./server/alembic as the
--- single source of truth for the database schema. Do NOT apply this
--- file directly to a live database.
--- Enum/type names here (e.g., ticket_status) may differ from runtime
--- types created by Alembic (e.g., ticket_status_t). Running this file
--- can lead to duplicate/Conflicting types and migration failures.
--- Keep for documentation, or delete if it causes confusion.
--- =============================================================
-
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
-
-
-
-# Documentation
-- [Architecture Reference](./ARCHITECTURE.md)
-
 # PrivetSuperApp — Architecture Reference
 
-## Overview
+_Last updated: 2025-09-18_
 
-PrivetSuperApp is designed as a scalable and maintainable web application with a clear separation between the frontend and backend layers. The architecture emphasizes modularity, security, and performance.
-
----
-
-## System Components
-
-### Frontend
-
-- **Framework:** React with TypeScript for type safety and developer experience.
-- **Build Tool:** Vite for fast development and optimized builds.
-- **State Management:** TanStack Query for server state synchronization.
-- **Form Handling:** React Hook Form combined with Zod for validation.
-- **Routing:** React Router for client-side navigation.
-- **Styling:** CSS modules and global styles for consistent UI.
-
-### Backend
-
-**Schema source of truth:** Database changes are managed exclusively via Alembic migrations under `server/alembic`. The root-level `DATABASE_SCHEMA.sql` is a reference snapshot only and must not be executed against live databases; applying it can create duplicate enums/types and break migrations.
-
-- **Framework:** FastAPI for asynchronous, high-performance APIs.
-- **Database:** PostgreSQL with SQLAlchemy 2.0 ORM for data modeling and migrations.
-- **Migrations:** Alembic for schema version control.
-- **Authentication:** JWT tokens (access and refresh) with sessions stored in the database.
-- **Storage:** MinIO or S3-compatible service for media and document storage.
-- **Caching & Rate Limiting:** Optional Redis integration.
+This document summarizes the technical architecture of the PrivetSuper monorepo. It should help new contributors navigate the codebase, understand the separation between the consumer product and the new master portal, and know where to hook additional functionality.
 
 ---
 
-## Directory Structure
+## 1. High-Level View
 
 ```
-.
-├── server/                      # Backend source code
-│   ├── app/
-│   │   ├── main.py              # Application entrypoint
-│   │   ├── core/                # Configuration, security, logging
-│   │   ├── db/                  # Database setup and migrations
-│   │   ├── models/              # ORM models
-│   │   ├── schemas/             # Pydantic models for validation
-│   │   ├── repositories/        # Data access layer
-│   │   ├── services/            # Business logic (auth, email, storage)
-│   │   ├── api/                 # API routes and dependencies
-│   │   └── utils/               # Helper utilities
-│   ├── tests/                   # Backend tests
-│   ├── pyproject.toml           # Python dependencies and tooling
-│   ├── alembic.ini              # Alembic configuration
-│   └── .env.example             # Environment variables template
-│
-├── client/                      # Frontend source code
-│   ├── src/
-│   │   ├── app/                 # Router and query client setup
-│   │   ├── shared/              # Reusable components, hooks, types
-│   │   ├── modules/             # Feature modules (auth, profile, devices, etc.)
-│   │   ├── widgets/             # UI widgets
-│   │   └── styles/              # Global styles and variables
-│   ├── index.html
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── package.json
-│
-├── docker/                      # Docker configurations and compose files
-│
-├── ARCHITECTURE.md              # This document
-└── README.md                    # Project overview and setup instructions
+┌────────────────────┐        ┌────────────────────┐
+│  consumer browser  │◀──────▶│  server/frontend   │
+│ (privetsuper.ru)   │   SPA  │  (React + Vite)    │
+└────────────────────┘        └────────────────────┘
+              ▲                          │
+              │                          ▼
+              │                  `/api/v1/*`
+              │                          ▼
+┌────────────────────┐        ┌────────────────────┐
+│  master browser    │◀──────▶│ server/frontend-   │
+│ (master.privet… )  │   SPA  │ master (React)     │
+└────────────────────┘        └────────────────────┘
+              ▲                          │
+              │                          ▼
+              │                  `/api/master/*`
+              │                          ▼
+              │          ┌────────────────────────┐
+              └──────────│  FastAPI backend        │
+                         │  server/app/main.py     │
+                         │  Alembic migrations     │
+                         │  PostgreSQL (psycopg3)  │
+                         └────────────────────────┘
 ```
 
----
+Both frontends are static builds deployed separately, but they talk to the same FastAPI instance. The backend exposes two logical surfaces:
 
-## Authentication Flow
-
-- Users authenticate using JWT tokens.
-- Access tokens have a short lifespan.
-- Refresh tokens are stored in a sessions table in the database.
-- Backend validates tokens and manages session lifecycle.
-- Frontend stores tokens securely and handles token refresh transparently.
+1. `/api/v1` — consumer APIs (auth, devices, tickets, support, etc.).
+2. `/api/master` — master-only authentication contour (isolated router, JWT secrets).
 
 ---
 
-## API Design
+## 2. Backend Layout (`server/app`)
 
-- RESTful API with versioning (`/api/v1/`).
-- Endpoints grouped by domain (auth, profile, devices, tickets, support, faq, pages).
-- Dependency injection for common concerns (authentication, pagination).
-- Pydantic models for request validation and response serialization.
+| Module | Purpose |
+|--------|---------|
+| `app/main.py` | Instantiates `FastAPI`, enables CORS, mounts the consumer router (`/api/v1`) and the master router (`/api/master`). Also serves the consumer SPA assets under `/` in production builds. |
+| `app/core/` | Cross-cutting concerns: configuration, database session factory (`database.py`), password hashing, JWT utilities. The `settings` module reads from `server/.env`. |
+| `app/master_api/` | New master contour. Contains models, CRUD helpers, JWT security, FastAPI dependencies, and the router. |
+| `app/api/v1/` | Existing consumer API routers grouped by domain (`auth`, `users`, `tickets`, etc.). |
+| `app/models/` | Declarative SQLAlchemy models for consumer domain. Master user model lives in `app/master_api/models.py` to keep the contour isolated. |
+| `app/services/` | Business logic classes invoked by routers. |
 
----
+### Database
 
-## Storage Strategy
+- SQLAlchemy 2.x async (`AsyncSession`) with psycopg3 driver.
+- Alembic migrations under `server/alembic/versions/` are the single source of truth.
+- The migration `20250918_01_master_users.py` introduces the `master_users` table and ensures `pgcrypto` is available for UUID generation.
 
-- Media files and documents are uploaded directly to S3-compatible storage using presigned URLs.
-- Backend manages presigned URL generation and access permissions.
-- MinIO can be used for local development and testing.
+`master_users` schema:
 
----
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | UUID | Primary key, default `gen_random_uuid()` |
+| `email` | text | Lowercased, unique |
+| `password_hash` | text | Bcrypt hashed via `passlib` |
+| `is_active` | bool | Enables temporary blocking |
+| `created_at` / `updated_at` | timestamptz | Managed by DB defaults |
 
-## Development Workflow
+### Auth Flows
 
-1. Launch infrastructure with Docker Compose (Postgres, MinIO, Redis optional).
-2. Run backend FastAPI server with Alembic migrations applied.
-3. Start frontend Vite development server with proxy configuration to backend.
-4. Use environment variables to configure API endpoints and secrets.
-
----
-
-## Future Enhancements
-
-- Implement comprehensive testing suites for backend and frontend.
-- Add real-time capabilities using WebSockets or server-sent events.
-- Integrate analytics and monitoring tools.
-- Expand support for mobile clients via Capacitor or React Native.
-
----
-
-## Contact and Support
-
-For questions or contributions, please reach out via the support channels defined in the application or project repository.
+- **Consumer (`/api/v1`)** uses existing JWT access + refresh tokens managed in `core/security.py`.
+- **Master (`/api/master`)** issues a single short-lived access token (no refresh yet). Token payload contains `sub` and `email` and is signed with `MASTER_SECRET_KEY`.
+- `app/master_api/deps.py` provides `get_current_master` to guard master-only endpoints.
 
 ---
 
-*End of Architecture Reference*
+## 3. Frontends
 
+### 3.1 Consumer SPA (`server/frontend`)
 
-cat > src/shared/api/http.ts << 'JS'
-import axios from 'axios';
+- React 19, React Router 7, TanStack Query, React Hook Form, Zod.
+- Entry point `src/main.tsx` bootstraps router + query client.
+- Global styles in `src/styles/*`. Auth screens reuse `forms.css` & `style.css`.
+- API helper `src/shared/api.ts` handles token refresh using `/api/v1/auth/refresh`.
+- Build command: `npm run build` ⇒ `dist/` served by backend `StaticFiles` or CDN.
 
-// Base URL points to FastAPI backend; VITE_API_BASE_URL should include protocol + host + port.
-const baseURL = (import.meta as any).env?.VITE_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+### 3.2 Master SPA (`server/frontend-master`)
 
-// If your backend is namespaced (e.g., "/api"), append it here once:
-const api = axios.create({ baseURL: baseURL });
+- Minimal Vite project mirroring the consumer login look & feel.
+- Uses only `react`, `react-hook-form`, `zod` for the authentication form.
+- Shares CSS copied from the consumer app (`src/styles/style.css`, `src/styles/forms.css`).
+- API helper `src/shared/api.ts` posts to `/api/master/auth/login` with form-encoded credentials and stores `master_access_token` in `localStorage`.
+- After login, navigation header with three placeholder tabs is rendered (ready for future modules like contract confirmation).
 
-// Attach access token from localStorage (key: "access_token").
-api.interceptors.request.use((config) => {
-  try {
-    const token = localStorage.getItem('access_token');
-    if (token && !config.headers?.Authorization) {
-      (config.headers as any).Authorization = `Bearer ${token}`;
-    }
-  } catch {}
-  return config;
-});
+Environment configuration:
 
-export default api;
-JS
-
-# Архитектура проекта
-
-## Слои
-
-1. API (Routers)
-   - Валидация входных данных
-   - Маршрутизация запросов
-   - Форматирование ответов
-
-2. Services
-   - Бизнес-логика
-   - Координация репозиториев
-   - Транзакции
-
-3. Repositories/Models
-   - Работа с БД
-   - ORM модели
-   - Миграции
-
-## Аутентификация
-
-- JWT токены (HS256)
-  - access_token: {sub, typ: "access", exp: 15min}
-  - refresh_token: {sub, typ: "refresh", exp: 30d}
-- Хранение refresh сессий в БД
-- Ротация токенов при refresh
-
-## Зависимости
-
-- get_db(): Async Session
-- get_current_user(): Current User
-- Централизованная security scheme (Bearer)
-
-## База данных
-
-- Миграции через Alembic
-- Синхронизация моделей SQLAlchemy
-- Референсная схема в DATABASE_SCHEMA.sql
-# PrivetSuperApp — Architecture Reference
-
-## Overview
-FastAPI backend + (planned) React/Vite frontend. The backend is modular, async, and driven by Alembic migrations. This doc reflects the **current** contracts and DB after our latest changes (devices public read/search, ticket statuses, users.has_subscription).
-
----
-
-## System Components
-
-### Backend
-- **Framework:** FastAPI (ASGI) + Uvicorn
-- **DB/ORM:** PostgreSQL + SQLAlchemy 2.0 (async) + Alembic
-- **Auth:** JWT (access), Passlib (argon2/bcrypt)
-- **Config:** `python-dotenv`, explicit `server/.env`
-- **Docs:** Swagger UI (`/docs`), OpenAPI JSON (`/openapi.json`)
-
-### Frontend (next phase)
-- **Stack:** React + TypeScript, Vite, React Router, TanStack Query, RHF + Zod
-- **API client:** Axios with Bearer token from localStorage
-
----
-
-## Directory Structure (high level)
 ```
-.
-├── server/                      # Backend sources
-│   ├── app/
-│   │   ├── main.py              # App entrypoint (loads server/.env)
-│   │   ├── core/                # config, security, db, deps
-│   │   ├── models/              # SQLAlchemy models
-│   │   ├── schemas/             # Pydantic I/O models
-│   │   ├── services/            # Business logic
-│   │   └── api/v1/              # Routers (users/auth, devices, tickets, admin)
-│   ├── alembic/                 # Alembic env + versions
-│   ├── alembic.ini              # Alembic config (uses $DATABASE_URL)
-│   └── requirements.txt
-├── docs/                        # Docs & generated snapshots
-│   ├── ARCHITECTURE.md          # This document
-│   ├── ERD.md                   # Mermaid ER diagram
-│   ├── FILE_TREE.md             # File tree snapshot
-│   ├── db_schema.sql            # Schema snapshot (reference-only)
-│   └── Makefile                 # helper targets (dump/openapi/tree)
-└── README.md
+server/frontend/.env         -> VITE_API_BASE=/api/v1
+server/frontend-master/.env  -> VITE_API_BASE=/api/master
 ```
 
----
-
-## API Design (v1)
-- Versioned under `/api/v1/`.
-- Grouped by domain: `auth`, `user`, `devices`, `tickets`, `admin`, `default`.
-- **Auth in Swagger:** click *Authorize* → *bearerAuth* → paste the token from `/api/v1/auth/login`.
-
-### Devices (as agreed)
-- `GET /api/v1/devices/{id}` — **public**, full device info
-- `GET /api/v1/devices/search` — **public**, returns list of `{id, title}`; filters: `user_id?`, `device_id?`, `title?`, `brand?`, `model?`, `serial_number?`
-- `GET /api/v1/devices/my` — **auth**, only current user's devices, list of `{id, title}`
-- `POST /api/v1/devices` — **public**, requires explicit `user_id` in payload
-- `PATCH /api/v1/devices/{id}` — **public**, updates device by id
-
-### Tickets
-- Statuses: `new` → `in_progress` → `completed` (+ `rejected`)
-- `POST /api/v1/tickets/` (auth), `GET /api/v1/tickets/` (auth), `GET /api/v1/tickets/{id}` (auth)
-- `PATCH /api/v1/tickets/{id}` (auth), `PATCH /api/v1/tickets/{id}/status` (auth)
-
-### Users/Auth
-- `POST /api/v1/auth/register`, `POST /api/v1/auth/login`
-- `GET /api/v1/user/me`, `POST /api/v1/user/change-password`, `DELETE /api/v1/user`
+Both apps use relative paths so they work behind the same domain via path proxying or separate subdomains.
 
 ---
 
-## Database (source of truth: Alembic)
-- Migrations live in `server/alembic/versions`.
-- We also keep a **reference-only** snapshot at `docs/db_schema.sql` (do **not** apply to live DB).
-- Key recent changes:
-  - `users.has_subscription` (BOOLEAN NOT NULL, default false)
-  - `tickets.status` extended to: `new`, `in_progress`, `completed`, `rejected`
+## 4. Deployment Model
 
-See: `docs/ERD.md` for ER diagram.
-
----
-
-## Configuration
-- Backend loads env from `server/.env` (explicit path):
-  - `DATABASE_URL`, `SECRET_KEY`, `CORS_ALLOW_ORIGINS`, etc.
-- CORS configured from env; dev may use `*`, prod must be restricted.
+1. **Backend**: Deploy `server/app` behind gunicorn/uvicorn workers (`uvicorn app.main:app`). Static consumer assets can be served from the backend if copied to `server/frontend/dist` on the same host. Configure TLS using Caddy/Nginx.
+2. **Consumer SPA**: Build to `server/frontend/dist` and upload to CDN or serve from backend.
+3. **Master SPA**: Build to `server/frontend-master/dist` and deploy separately (e.g. S3 bucket + CloudFront pointing at `master.privetsuper.ru`).
+4. **Secrets**: Maintain independent `SECRET_KEY` and `MASTER_SECRET_KEY`. Update `.env` files in CI/CD pipelines.
+5. **Database**: Run Alembic migrations as part of deployment (`alembic upgrade head`). Ensure `pgcrypto` extension is installed.
 
 ---
 
-## Build & Ops
-- **Run dev:** `uvicorn app.main:app --reload`
-- **Migrate:** `alembic upgrade head`
-- **Dump schema:** `make -C docs dump-schema`
-- **Export OpenAPI:** `make -C docs openapi`
-- **Update file tree:** `make -C docs tree` (macOS/Linux) / manual on Windows
+## 5. Future Work
+
+- Extend `/api/master` with contract-confirmation endpoints.
+- Replace placeholder tabs with real pages (e.g., dashboard, contract queue, archive).
+- Add refresh tokens for master accounts if long-lived sessions are required.
+- Consolidate shared UI components between consumer and master frontends (move to a shared package or Nx workspace if duplication grows).
+- Harden security with IP restriction/MFA for master accounts.
 
 ---
 
-## Future Enhancements
-- Tests (unit/integration) for services and routers
-- WebSockets/SSE for realtime updates
-- CI/CD with migrations and health checks
-- Observability (logging/metrics/traces)
+## 6. Reference
+
+- Backend entry point: `server/app/main.py`
+- Master model definition: `server/app/master_api/models.py`
+- Master login router: `server/app/master_api/router.py`
+- Migration: `server/alembic/versions/20250918_01_master_users.py`
+- Master login page: `server/frontend-master/src/modules/auth/LoginPage.tsx`
+
+For database diagrams and historical context, check `docs/ERD.md` and `docs/DATABASE_SCHEMA.sql` (reference only).
+
+---
+
+_Questions or corrections? Create an issue or update this file._
