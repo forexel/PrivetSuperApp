@@ -20,7 +20,7 @@ import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Union
 
-import jwt
+from jose import jwt
 
 try:
     # Prefer app settings if available

@@ -29,9 +29,14 @@ import './styles/dashboard.css'
 import SubscriptionPage from './modules/home/SubscriptionPage'
 import SubscriptionSuccess from './modules/home/SubscritionSuccsess'
 import SubscriptionDenied from './modules/home/SubscritionDenied'
+import SubscriptionPayPage from './modules/home/SubscriptionPayPage'
+import InvoicePayPage from './modules/invoices/InvoicePayPage'
+import InvoicePaySuccessPage from './modules/invoices/InvoicePaySuccessPage'
+import InvoicePayDeniedPage from './modules/invoices/InvoicePayDeniedPage'
 
-// PWA: регистрируем SW только в production, чтобы не ломать dev
-if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+// PWA: в localhost отключаем SW, чтобы не кэшировались старые ассеты
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+if (import.meta.env.PROD && !isLocalhost && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     const ver = (import.meta.env as any).VITE_APP_VERSION || (import.meta.env as any).VITE_GIT_SHA || ''
     const swUrl = `/sw.js${ver ? `?v=${encodeURIComponent(ver)}` : ''}`
@@ -50,8 +55,8 @@ if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   })
 }
 
-// В dev удаляем ранее установленные SW, чтобы не было застрявшего кэша
-if (!import.meta.env.PROD && 'serviceWorker' in navigator) {
+// На localhost удаляем ранее установленные SW, чтобы не было застрявшего кэша
+if (isLocalhost && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations?.().then((regs) => {
     regs.forEach((r) => r.unregister().catch(() => {}))
   }).catch(() => {})
@@ -79,8 +84,12 @@ const router = createBrowserRouter([
       { path: 'tickets/success', element: <TicketSuccessPage />}, // успех (фулл-скрин)
       { path: 'tickets/:id', element: <TicketDetailPage /> },     // подробности + чат
       { path: 'subscriptions', element: <SubscriptionPage /> },
+      { path: 'subscriptions/pay', element: <SubscriptionPayPage /> },
       { path: 'subscriptions/success', element: <SubscriptionSuccess /> },
       { path: 'subscriptions/denied', element: <SubscriptionDenied /> },
+      { path: 'invoices/pay', element: <InvoicePayPage /> },
+      { path: 'invoices/success', element: <InvoicePaySuccessPage /> },
+      { path: 'invoices/denied', element: <InvoicePayDeniedPage /> },
       { path: 'support', element: <SupportListPages /> },         // список «Мои обращения»
       { path: 'support/new', element: <SupportCreatePage /> },   // создать обращение
       { path: 'support/success', element: <SupportSuccessPage /> }, // успех

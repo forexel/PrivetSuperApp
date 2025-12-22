@@ -16,9 +16,10 @@ from app.models.base import Base
 # ---- User Schemas ----
 
 class UserBase(BaseModel):
-    phone: str = Field(..., examples=["+79991234567"])              # телефон обязателен
-    email: Optional[EmailStr] = None                                # email опционален
-    name: Optional[str] = Field(default=None, examples=["Danila"])  # имя можно не передавать
+    phone: str = Field(..., examples=["+79991234567"])                # телефон обязателен
+    email: Optional[EmailStr] = None                                  # email опционален
+    name: Optional[str] = Field(default=None, examples=["Danila"])    # имя можно не передавать
+    address: Optional[str] = Field(default=None, examples=["г. Москва, ул. Ленина, д. 8"])
 
 class UserCreate(UserBase):
     password: str = Field(..., min_length=8, examples=["secret123"])  # как ты просил — минимум 8
@@ -57,6 +58,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, nullable=True)
     password_hash: Mapped[str] = mapped_column(String, nullable=False)
     name: Mapped[str] = mapped_column(String)
+    address: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(
         SAEnum(
             'active', 'blocked', 'deleted', 'gost', 'ghost',

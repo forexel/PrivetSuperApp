@@ -39,6 +39,16 @@
   border-radius:9999px; border:none;
   background:#e5e7eb; color:#111827; font-weight:600; font-size:16px; cursor:pointer;
 }
+
+/* Центрируем кнопки в модальных карточках оплаты/подписки */
+.card.auth-card .btn.btn-primary,
+.card.auth-card .btn.btn-secondary,
+.card.auth-card .btn-primary,
+.card.auth-card .btn-secondary{
+  margin-left: auto;
+  margin-right: auto;
+  align-self: center;
+}
 .btn.btn-secondary:disabled, .btn-secondary:disabled{ opacity:.6; cursor:default; }
 
 .auth-footer{
@@ -48,6 +58,28 @@
 }
 .auth-footer a{ color:#111827; font-weight:600; text-decoration:none; }
 .auth-footer a:hover{ text-decoration:underline; }
+
+.terms-row{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 90%;
+  margin: 0 auto;
+  font-size: 13px;
+  color: #111827;
+}
+
+.terms-row input{
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.terms-link{
+  color: #111827;
+  font-weight: 600;
+  text-decoration: underline;
+}
 
 textarea.input,
 .input.input-area {
@@ -167,6 +199,7 @@ textarea.input, .input.input-area {
   padding-top: 44px; /* место под крестик внутри контейнера */
 }
 .modal-wrap.modal-wrap--wide{ max-width: 360px; }
+.modal-wrap.modal-wrap--no-close{ padding-top: 0; }
 .modal-wrap > .close-floating{
   position: absolute;
   top: 0; /* внутри отступа контейнера */

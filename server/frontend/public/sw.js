@@ -1,4 +1,4 @@
-const VERSION = 'v3';
+const VERSION = 'v4';
 const RUNTIME = `privet-runtime-${VERSION}`;
 
 self.addEventListener('install', (e) => {

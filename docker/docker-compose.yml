@@ -1,26 +1,42 @@
-version: "3.9"
 services:
-  db:
-    image: postgres:15
+  apps_privet_super_api:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: apps-privet_super_api
     environment:
-      POSTGRES_USER: privet
-      POSTGRES_PASSWORD: privet
-      POSTGRES_DB: privetdb
+      DATABASE_URL: postgresql+psycopg://privet:privet@host.docker.internal:5432/privetdb
+      JWT_SECRET: change_me_backend_secret
+      MASTER_JWT_SECRET: change_me_master_secret
+      MASTER_ACCESS_TOKEN_EXPIRE_MINUTES: "120"
+      S3_ENDPOINT: http://host.docker.internal:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: privet-bucket
     ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
-  minio:
-    image: minio/minio
-    command: server /data --console-address ":9001"
+      - "8200:8000"
+    networks:
+      - privetmaster_net
+
+  apps_privet_super_migrator:
+    build:
+      context: ../server
+      dockerfile: Dockerfile
+    container_name: apps-privet_super_migrator
     environment:
-      MINIO_ROOT_USER: minio
-      MINIO_ROOT_PASSWORD: minio123
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    volumes:
-      - minio_data:/data
-volumes:
-  db_data:
-  minio_data:
+      DATABASE_URL: postgresql+psycopg://privet:privet@host.docker.internal:5432/privetdb
+      JWT_SECRET: change_me_backend_secret
+      MASTER_JWT_SECRET: change_me_master_secret
+      MASTER_ACCESS_TOKEN_EXPIRE_MINUTES: "120"
+      S3_ENDPOINT: http://host.docker.internal:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_BUCKET: privet-bucket
+    command: ["/app/scripts/docker_entrypoint.sh", "echo", "migrations finished"]
+    networks:
+      - privetmaster_net
+    profiles: ["migrate"]
+
+networks:
+  privetmaster_net:
+    driver: bridge

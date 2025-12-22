@@ -1,6 +1,6 @@
 from datetime import datetime
 import uuid
-from sqlalchemy import select
+from sqlalchemy import select, text
 import logging, time
 from sqlalchemy.exc import IntegrityError
 
@@ -8,18 +8,37 @@ from app.core.security import hash_password, verify_password
 from app.models.users import User, UserStatus
 from app.services.base import BaseService
 
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-
 auth_logger = logging.getLogger("app.auth")
 
 
 class UserService(BaseService):
-    async def create(self, phone: str, password: str, name: str = None, email: str = None) -> User:
+    async def create(
+        self,
+        phone: str,
+        password: str,
+        name: str | None = None,
+        email: str | None = None,
+        address: str | None = None,
+    ) -> User:
+        masked_phone = (phone[:-2] + "**") if phone else ""
+        auth_logger.info(
+            "CREATE user payload phone=%s email=%s name=%s address_raw=%s",
+            masked_phone,
+            email,
+            name,
+            address,
+        )
         # нормализация входа
         phone = (phone or "").strip()
         name  = (name  or "").strip()        # чтобы не улетал NULL в NOT NULL колонку
         email = (email or None)
+        address = (address or "").strip() or None
+        auth_logger.debug(
+            "CREATE user normalized phone=%s name=%s address=%s",
+            phone,
+            name,
+            address,
+        )
 
         # быстрые явные проверки дублей — для понятных сообщений
         exists_phone = await self.db.scalar(select(User.id).where(User.phone == phone))
@@ -35,11 +54,18 @@ class UserService(BaseService):
             phone=phone,
             password_hash=hash_password(password),
             name=name,
-            email=email
+            email=email,
+            address=address,
         )
         self.db.add(user)
         try:
+            await self.db.flush()
+            auth_logger.info("CREATE user flushed id=%s address=%s", user.id, user.address)
+            await self._ensure_manager_client(user.id)
             await self.db.commit()
+            auth_logger.info("CREATE user committed id=%s address=%s", user.id, user.address)
+            await self.db.refresh(user)
+            auth_logger.info("CREATE user refreshed id=%s address=%s", user.id, user.address)
             return user
         except IntegrityError as e:
             await self.db.rollback()
@@ -54,6 +80,80 @@ class UserService(BaseService):
             if "null value" in msg and "phone" in msg:
                 raise ValueError("Phone is required")
             raise ValueError("Registration failed")
+        except Exception:
+            await self.db.rollback()
+            raise
+
+    async def _ensure_manager_client(self, user_id: uuid.UUID) -> None:
+        """Гарантируем, что в manager_clients есть базовая запись для пользователя.
+
+        Таблица manager_clients содержит минимум полей (id, user_id, status, assigned_manager_id, created/updated).
+        Поэтому никакие адреса/ФИО сюда не пишем — они остаются в таблице users и связанных сущностях.
+        """
+        masked_user = str(user_id)
+
+        # Если запись уже существует — просто обновим updated_at.
+        existing = await self.db.execute(
+            text("SELECT id FROM manager_clients WHERE user_id = :user_id"),
+            {"user_id": str(user_id)},
+        )
+        manager_id = existing.scalar()
+
+        if manager_id:
+            auth_logger.info(
+                "MANAGER update existing user_id=%s (touch updated_at)",
+                masked_user,
+            )
+            try:
+                await self.db.execute(
+                    text(
+                        """
+                        UPDATE manager_clients
+                        SET updated_at = NOW()
+                        WHERE user_id = :user_id
+                        """
+                    ),
+                    {
+                        "user_id": str(user_id),
+                    },
+                )
+            except Exception as exc:
+                msg = str(getattr(exc, "orig", exc)).lower()
+                auth_logger.warning(
+                    "MANAGER touch failed for user_id=%s: %s",
+                    masked_user,
+                    msg,
+                )
+                raise
+            return
+
+        auth_logger.info(
+            "MANAGER insert new client user_id=%s",
+            masked_user,
+        )
+        payload = {
+            "id": str(uuid.uuid4()),
+            "user_id": str(user_id),
+            "status": "new",
+        }
+        try:
+            await self.db.execute(
+                text(
+                    """
+                    INSERT INTO manager_clients (id, user_id, status)
+                    VALUES (:id, :user_id, :status)
+                    """
+                ),
+                payload,
+            )
+        except Exception as exc:
+            msg = str(getattr(exc, "orig", exc)).lower()
+            auth_logger.error(
+                "MANAGER insert failed for user_id=%s: %s",
+                masked_user,
+                msg,
+            )
+            raise
 
     async def authenticate(self, phone: str, password: str) -> User | None:
         t0 = time.perf_counter()

@@ -1,30 +1,29 @@
-# PrivetSuperApp Monorepo
+# PrivetSuperApp
 
-This repository hosts everything required to run the PrivetSuper platform:
+Клиентское приложение “Привет Супер”: FastAPI API + React/Vite SPA, выдаваемая из API. Здесь же миграции Alembic и docker‑скрипты.
 
-- **FastAPI backend** in `server/app` serving the public consumer API (`/api/v1`) and the new master-only contour (`/api/master`).
-- **Consumer frontend** (React/Vite) in `server/frontend` for privetsuper.ru.
-- **Master portal frontend** (React/Vite) in `server/frontend-master` for master.privetsuper.ru.
-- **Alembic migrations** and deployment tooling in `server/alembic`, `deploy/`, `docker/`.
-
-Use this document as the single place to bootstrap a local environment or understand the moving parts.
+Что внутри:
+- **Backend**: `server/app` (`/api/v1`).
+- **Frontend (SPA)**: `server/frontend`, отдаётся FastAPI из `server/app/main.py`.
+- **Migrations**: `server/alembic`.
+- **Docker**: `docker/docker-compose.yml` (контейнер `apps-privet_super_api`).
 
 ---
 
-## 1. Requirements
+## 1. Требования
 
 | Tool | Version | Notes |
 |------|---------|-------|
-| Python | 3.12+ | Required for the FastAPI backend |
-| Node.js | 20+ | Needed to build both frontends |
-| PostgreSQL | 14+ | Primary database |
-| Poetry/pip | optional | We use `pip` in the examples |
+| Python | 3.12+ | Backend (FastAPI) |
+| Node.js | 20+ | Frontend build (Vite) |
+| PostgreSQL | 14+ | База данных |
+| Docker | optional | Локальный запуск из контейнера |
 
 If you rely on optional features (Redis, MinIO, Capacitor, etc.) consult the `/docker` folder.
 
 ---
 
-## 2. Backend Setup (`server/`)
+## 2. Backend + Frontend (`server/`)
 
 ```bash
 cd server
@@ -53,27 +52,25 @@ MASTER_SECRET_KEY=replace_me_master_secret
 MASTER_ACCESS_MIN=120
 ```
 
-Apply migrations (includes the new `master_users` table):
+Apply migrations:
 
 ```bash
 alembic upgrade head
 ```
 
-Run the API:
+Run the API (serves SPA too):
 
 ```bash
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Swagger is available at <http://127.0.0.1:8000/docs>. The master contour lives at `/api/master/auth/*`.
+Swagger: <http://127.0.0.1:8000/docs>.
 
 ---
 
-## 3. Frontend Setup
+## 3. Frontend (SPA) отдельно
 
-Both frontends are standard Vite projects.
-
-### 3.1 Consumer App (`server/frontend`)
+### 3.1 Client App (`server/frontend`)
 
 ```bash
 cd server/frontend
@@ -81,85 +78,51 @@ npm install
 npm run dev  # default port 5173
 ```
 
-`server/frontend/.env` already points `VITE_API_BASE=/api/v1` (see `server/frontend/.env.example`), so requests are proxied to the backend.
-
-### 3.2 Master Portal (`server/frontend-master`)
-
-```bash
-cd server/frontend-master
-npm install
-npm run dev -- --port 5174
-```
-
-`server/frontend-master/.env` sets `VITE_API_BASE=/api/master`. After a successful login the app shows an empty workspace with three placeholder tabs on top (ready for the upcoming contract-confirmation flows).
+`server/frontend/.env` already points `VITE_API_BASE=/api/v1` (see `server/frontend/.env.example`).
 
 Build commands:
 
 ```bash
-npm run build      # in each frontend folder
-npm run preview    # optional static preview
+npm run build
+npm run preview
 ```
 
 Copy the generated `dist/` to your hosting bucket/CDN when deploying.
 
 ---
 
-## 4. Master Auth API Cheat Sheet
+## 4. Фичи клиента (кратко)
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/master/auth/login` | POST | Form-encoded login (`username` = email, `password`) → returns JWT |
-| `/api/master/auth/me` | GET | Returns the authenticated master profile |
+- Счета (user_invoices) с заглушкой оплаты: экран выбора счетов, успех/ошибка оплаты.
+- Счета скрываются после `due_date` (обычно это +3 дня).
+- Блок счетов на главной: “К оплате / Всего”.
+- Устройства клиента + фото из MinIO (галерея, просмотр).
+- Чекбокс согласия с условиями при регистрации, ссылка на `/terms.pdf`.
 
-The login endpoint follows the OAuth2 password grant (FastAPI `OAuth2PasswordRequestForm`). The master frontend stores the token in `localStorage` under `master_access_token`.
-
-### Creating a Master Account
-
-Use the `create_master` helper once you have a Python shell:
-
-```bash
-cd server
-source .venv/bin/activate
-python
-```
-
-```python
-from sqlalchemy.ext.asyncio import async_sessionmaker
-from app.core.database import engine
-from app.master_api.crud import create_master
-
-async def bootstrap():
-    async_session = async_sessionmaker(engine, expire_on_commit=False)
-    async with async_session() as session:
-        await create_master(session, email="admin@master.test", password="ChangeMe123")
-
-import asyncio
-asyncio.run(bootstrap())
-```
-
-Alternatively, seed via Alembic or SQL (`INSERT INTO master_users ...`).
-
----
-
-## 5. Project Structure (excerpt)
+## 5. Структура проекта
 
 ```
 server/
-├── app/
-│   ├── api/v1/           # consumer API routers
-│   ├── master_api/       # master-only JWT auth router, models, deps
-│   ├── core/             # config, db, security utilities
-│   └── main.py           # FastAPI application wiring
-├── alembic/              # migrations (master_users add-on lives here)
-├── frontend/             # privetsuper.ru React app
-└── frontend-master/      # master.privetsuper.ru React app
+├── app/                  # API
+├── alembic/              # migrations
+└── frontend/             # SPA (client)
 ```
 
 For more detail see `docs/ARCHITECTURE.md`, `docs/REQUIREMENTS.md`, and `docs/FILE_STRUCTURE.md`.
 
 ---
 
-## 6. Helpful Commands
+## 6. Docker запуск
+
+Контейнер по умолчанию:
+- API + SPA: `apps-privet_super_api` (порт `8200` → `8000` внутри)
+
+Команды:
+```bash
+docker compose -f docker/docker-compose.yml up -d --build apps_privet_super_api
+```
+
+## 7. Helpful Commands
 
 ```bash
 # Backend format & lint
@@ -174,27 +137,24 @@ npm run lint --prefix server/frontend
 
 # Build all
 npm run build --prefix server/frontend
-npm run build --prefix server/frontend-master
 ```
 
 ---
 
-## 7. Deployment Notes
+## 8. Deployment Notes
 
 - Serve the backend behind TLS (Caddy, Nginx, Cloudflare Tunnel, etc.).
-- Point `privetsuper.ru` to the `server/frontend/dist` bundle and `master.privetsuper.ru` to `server/frontend-master/dist`.
+- Point `privetsuper.ru` to the backend (SPA отдаётся из API).
 - Configure CORS in `server/.env` with the production domains.
-- Rotate both `SECRET_KEY` and `MASTER_SECRET_KEY` in production.
+- Rotate `SECRET_KEY` in production.
 - Keep Alembic migrations in sync across environments (`alembic revision --autogenerate` for changes, review before applying).
 
 ---
 
-## 8. Troubleshooting
+## 9. Troubleshooting
 
-- **401 on master login**: ensure the user exists in `master_users`, password hashed via `create_master`, and `MASTER_SECRET_KEY` matches between backend and master frontend.
-- **Migrations missing pgcrypto**: the `20250918_01` migration enables the extension. Grant the role `CREATE` rights or enable manually (`CREATE EXTENSION pgcrypto;`).
-- **Frontends cannot reach API**: double-check the backend port (8000 by default) and that `VITE_API_BASE` points to `/api/v1` or `/api/master`.
-- **Token expired**: `MASTER_ACCESS_MIN` defaults to 120 minutes; adjust in `server/.env` as needed.
+- **Frontends cannot reach API**: check backend port (8000 by default) and `VITE_API_BASE=/api/v1`.
+- **Stale UI**: clear Service Worker cache (если PWA).
 
 ---
 

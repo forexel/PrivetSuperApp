@@ -46,9 +46,17 @@ async def register(
             password=payload.password,
             name=payload.name,
             email=payload.email,
+            address=payload.address,
         )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+
+    logger.info(
+        "REGISTER success user_id=%s phone=%s address=%s",
+        user.id,
+        phone10,
+        user.address,
+    )
 
     return {
         "access_token": create_access_token(str(user.id)),
@@ -197,6 +205,7 @@ async def get_me(current_user: Annotated[object, Depends(get_current_user)]):
 class UserUpdateRequest(BaseModel):
     name: str | None = None
     email: EmailStr | None = None
+    address: str | None = None
 
 
 @router.put("", response_model=UserResponse)

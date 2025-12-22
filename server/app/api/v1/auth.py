@@ -17,7 +17,16 @@ async def register(
 ):
     service = UserService(db)
     try:
-        user = await service.create(**user_data.model_dump())
+        # log incoming registration payload (mask phone)
+        try:
+            mask = (user_data.phone[:-2] + "**") if getattr(user_data, "phone", None) else ""
+            auth_logger.info(
+                "REGISTER payload phone=%s email=%s name=%s address=%s",
+                mask, getattr(user_data, "email", None), getattr(user_data, "name", None), getattr(user_data, "address", None)
+            )
+        except Exception:
+            pass
+        user = await service.create(**user_data.model_dump(exclude_none=False))
         return user
     except ValueError as e:
         raise HTTPException(

@@ -13,6 +13,7 @@ logging.getLogger("mailer").setLevel(logging.INFO)
 logging.getLogger("app.auth").propagate = True
 logging.getLogger("mailer").propagate = True
 
+
 logging.info("BOOT: logging configured (root=INFO)")
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,6 +56,13 @@ async def spa_root():
             headers={"Cache-Control": "no-store, max-age=0"},
         )
     return Response("Frontend build not found. Run npm run build in frontend.", status_code=503)
+
+@app.get("/terms.pdf", include_in_schema=False)
+async def terms_pdf():
+    f = DIST_DIR / "terms.pdf"
+    if f.exists():
+        return FileResponse(f, media_type="application/pdf")
+    return Response(status_code=404)
 
 # SPA fallback: любые пути — тоже index.html (для React Router)
 @app.get("/{path:path}", include_in_schema=False)

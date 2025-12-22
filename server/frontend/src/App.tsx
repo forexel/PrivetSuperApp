@@ -18,7 +18,13 @@ export default function App() {
     pathname.startsWith('/support/new') ||
     pathname.startsWith('/support/success') ||
     pathname.startsWith('/support/') ||    // деталка обращения
-    pathname.startsWith('/profile/delete') // экран удаления аккаунта
+    pathname.startsWith('/profile/delete') || // экран удаления аккаунта
+    pathname.startsWith('/subscriptions/pay') ||
+    pathname.startsWith('/subscriptions/success') ||
+    pathname.startsWith('/subscriptions/denied') ||
+    pathname.startsWith('/invoices/pay') ||
+    pathname.startsWith('/invoices/success') ||
+    pathname.startsWith('/invoices/denied')
   )
 
   return (

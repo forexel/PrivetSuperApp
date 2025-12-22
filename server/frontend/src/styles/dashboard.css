@@ -27,6 +27,14 @@
   z-index: 900;
   background: #fff;           /* чтобы не просвечивал список под ним */
   padding: 2px 20px;          /* совпадает с горизонтальными паддингами контейнера */
+  box-sizing: border-box;
+}
+
+.dashboard-title{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 8px;
 }
 
 /* блок с карточками */
@@ -34,6 +42,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 
 /* карточка */
@@ -57,11 +66,16 @@
   color: #9ca3af;
 }
 
+.summary-card .meta.meta-inline {
+  margin-top: 2px;
+}
+
 /* CTA-кнопка снизу */
 .dashboard .cta{
   display:flex;
   justify-content:center;
   margin: 16px 0 0;   /* было 24px — станет ближе к центру */
+  width: 100%;
 }
 
 .cta .btn-choose-plan {
@@ -99,10 +113,10 @@
 /* внутренняя обёртка */
 .navbar-bottom .inner{
   width: 100%;
-  max-width: var(--content-max);  /* 375 / 390 / 414 / 430 по медиаправилам */
-  margin: 0 auto;                 /* по центру */
+  max-width: 100%;
+  margin: 0 auto;
   min-height: var(--nav-h);
-  padding: 2px 0 calc(max(2px, env(safe-area-inset-bottom)) + var(--vvb, 0px));
+  padding: 2px 12px calc(max(2px, env(safe-area-inset-bottom)) + var(--vvb, 0px));
   display: flex;
   justify-content: space-around;
   align-items: center;

@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
 import { api } from '../../shared/api'
 import '../../styles/dashboard.css'
+import '../../styles/devices.css'
 
-type DeviceListItem = { id: string; title: string }
+type DeviceListItem = { id: string; title: string; created_at?: string }
 
 export function DevicesListPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ['devices', 'list'],
-    queryFn: () => api.get<DeviceListItem[]>('/devices/search'),
+    queryFn: () => api.get<DeviceListItem[]>('/devices/my'),
     retry: false,
   })
 
@@ -43,13 +43,21 @@ export function DevicesListPage() {
       )}
 
       {!isLoading && !error && (data ?? []).length > 0 && (
-        <ul style={{ padding: 0, margin: '8px 0 0' }}>
+        <div className="device-list">
           {(data ?? []).map((d) => (
-            <li key={d.id} style={{ listStyle: 'none', marginBottom: 8 }}>
-              <Link to={`/devices/${d.id}`}>{d.title} ({d.id})</Link>
-            </li>
+            <button
+              type="button"
+              key={d.id}
+              className="device-card"
+              onClick={() => window.location.assign(`/devices/${d.id}`)}
+            >
+              <div className="device-title">{d.title}</div>
+              <div className="device-meta">
+                зарегистрирован {d.created_at ? new Date(d.created_at).toLocaleDateString('ru-RU') : '—'}
+              </div>
+            </button>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   )

@@ -5,8 +5,8 @@ class Settings(BaseSettings):
     DATABASE_URL: AnyUrl = "postgresql+psycopg://privet:privet@localhost:5432/privetdb"
     JWT_SECRET: str = "change_me"
     S3_ENDPOINT: str = "http://localhost:9000"
-    S3_ACCESS_KEY: str = "minio"
-    S3_SECRET_KEY: str = "minio123"
+    S3_ACCESS_KEY: str = "minioadmin"
+    S3_SECRET_KEY: str = "minioadmin"
     S3_BUCKET: str = "privet-bucket"
     # Token lifetimes (can be overridden via .env)
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60

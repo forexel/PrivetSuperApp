@@ -43,6 +43,7 @@ const schema = z.object({
   phone: z.string().min(10, 'Введите корректный номер телефона'),
   password: z.string().min(8, 'Введите минимум 8 символов'),
   address: z.string().min(8, 'Введите корректный адрес'),
+  acceptTerms: z.boolean().refine((v) => v === true, { message: 'Примите условия использования сервиса' }),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -53,7 +54,7 @@ export function RegisterPage() {
     resolver: zodResolver(schema),
     mode: 'onSubmit',
     reValidateMode: 'onChange',
-    defaultValues: { name: '', email: '', phone: '', password: '', address: '' },
+    defaultValues: { name: '', email: '', phone: '', password: '', address: '', acceptTerms: false },
   })
 
   const [submitError, setSubmitError] = useState<string>('')
@@ -87,8 +88,7 @@ export function RegisterPage() {
   const onSubmit = async (data: FormValues) => {
     setSubmitError('')
     clearErrors()
-    // backend сейчас не принимает address — не отправляем его в payload
-    const payload = { name: data.name, email: data.email, phone: digits, password: data.password }
+    const payload = { name: data.name, email: data.email, phone: digits, password: data.password, address: data.address }
     try {
       // регистрируем
       await api.post('/auth/register', payload)
@@ -222,6 +222,18 @@ export function RegisterPage() {
             <label className="label">Пароль</label>
             <input className="input" type="password" placeholder="Минимум 8 символов" aria-invalid={!!errors.password} {...register('password')} />
             {errors.password && <small className="error" role="alert">{errors.password.message}</small>}
+          </div>
+          <div className="form-field">
+            <label className="terms-row">
+              <input type="checkbox" {...register('acceptTerms')} />
+              <span>
+                Я соглашаюсь с условиями использования сервиса{' '}
+                <a className="terms-link" href="/terms.pdf" target="_blank" rel="noreferrer">
+                  Условия использования сервиса
+                </a>
+              </span>
+            </label>
+            {errors.acceptTerms && <small className="error" role="alert">{errors.acceptTerms.message}</small>}
           </div>
           <button className="btn btn-primary" disabled={isSubmitting}>Зарегистрироваться</button>
         </form>

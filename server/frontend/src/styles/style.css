@@ -31,6 +31,7 @@ body{
   background: #fff;               /* на всякий случай дубль */
   display: flex;
   flex-direction: column;
+  width: 100%;
 }
 
 /* Контент, чтобы не уезжал под нижнее фикс-меню */
@@ -40,6 +41,7 @@ body{
   justify-content: center;
   align-items: flex-start;
   width: 100%;
+  max-width: 100%;
   padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + var(--vvb, 0px));
   background: #fff;  /* важно: чтобы под меню не виднелся .page-blue */
   /* фиксируем высоту области контента = высоте окна минус нижнее меню,
@@ -68,9 +70,10 @@ body{
   --text-light: #ffffff;
   --border: #e5e7eb;
   --content-max: 375px; 
-  --nav-h: 48px;   
+  --nav-h: 56px;   
   --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
 }
+
 
 .page-blue{
   min-height: 100dvh;
@@ -88,6 +91,10 @@ body{
   -webkit-overflow-scrolling: touch;
 }
 
+.page-blue--payment{
+  padding-top: calc(env(safe-area-inset-top) + 12px);
+}
+
 /* большой белый заголовок наверху */
 .auth-hero-title{
   margin:0 0 12px 0;        /* ещё компактнее */
@@ -96,6 +103,11 @@ body{
   line-height:1.2;
   color: var(--text-light);
   text-align:center;
+}
+
+.auth-hero-title--payment{
+  margin:0 0 14px 0;
+  font-size: 28px;
 }
 
 /* белая «карточка» формы */
@@ -164,8 +176,7 @@ html, body, input, textarea, button, select {
 }
 
 .app-content > .page-white,
-.app-content > .page-blue,
-.app-content > .dashboard {
+.app-content > .page-blue {
   flex: 0 0 100%;
   width: 100%;
   min-width: 0;  /* чтобы flex не сжимал/не давал минималки */

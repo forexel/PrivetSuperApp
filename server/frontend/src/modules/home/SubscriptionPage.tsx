@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { api } from '../../shared/api'
 
 const PRICES = {
   month: { simple: 3999,  medium: 7999,  premium: 13999 },
@@ -17,13 +16,8 @@ export default function SubscriptionPage() {
   const [period, setPeriod] = useState<'month'|'year'>('month')
   const nav = useNavigate()
 
-  const buy = async (plan: 'simple'|'medium'|'premium') => {
-    try {
-      await api.post('/subscriptions/create', { plan, period })
-      nav('/subscriptions/success', { replace: true })
-    } catch {
-      nav('/subscriptions/denied', { replace: true })
-    }
+  const buy = (plan: 'simple'|'medium'|'premium') => {
+    nav('/subscriptions/pay', { state: { plan, period } })
   }
 
   return (

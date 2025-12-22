@@ -30,7 +30,6 @@ export function ProfilePage() {
 
   // Активная подписка
   const [activeSub, setActiveSub] = useState<{ plan?: string|null; period?: string|null; paid_until?: string|null } | null>(null)
-
   const formatPhone = (raw?: string) => {
     if (!raw) return '—'
     const digits = String(raw).replace(/\D/g, '')
@@ -309,6 +308,7 @@ export function ProfilePage() {
             </button>
           )}
         </div>
+
       </div>
 
       <div className="profile-actions">

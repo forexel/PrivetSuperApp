@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../../shared/api'
 import { PLAN_TITLES, PERIOD_TITLES } from '../../shared/subscriptions'
 import '../../styles/dashboard.css'
+import '../../styles/invoices.css'
 
 type Ticket = {
   id: string
@@ -10,6 +11,15 @@ type Ticket = {
   description?: string
   status: 'new' | 'in_progress' | 'completed' | 'reject'
   updated_at?: string
+}
+
+type Invoice = {
+  id: string
+  amount: number
+  description?: string | null
+  contract_number?: string | null
+  due_date?: string | null
+  status: string
 }
 
 // Универсальный фетчер: забираем список заявок
@@ -43,6 +53,12 @@ export function HomePage() {
     queryFn: () => api.get<{ plan?: string|null; period?: string|null; paid_until?: string|null }>('/subscriptions/active'),
   });
 
+  // 4) счета пользователя
+  const { data: invoicesAll = [] } = useQuery({
+    queryKey: ['invoices', 'my', 'all'],
+    queryFn: () => api.get<Invoice[]>('/invoices/my?include_paid=true'),
+  })
+
   // 3) мой адрес
   const { data: me } = useQuery({
     queryKey: ['me'],
@@ -62,11 +78,13 @@ export function HomePage() {
   const activeSupportText = String(supportMeta?.active ?? 0)
   const totalSupportText  = String(supportMeta?.total  ?? 0)
 
+  const invoicesToPay = invoicesAll.filter((inv) => String(inv.status).toLowerCase() !== 'paid')
+
   // Заглушка для поддержки (позже можно сделать аналогичный запрос)
 
   return (
     <div className="dashboard">
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+      <div className="dashboard-title">
         <h1>Главная</h1>
       </div>
 
@@ -94,14 +112,24 @@ export function HomePage() {
 
         <div className="summary-card">
           <div className="title">Вызовы мастеров</div>
-          <div className="meta">Активных: {activeText}</div>
-          <div className="meta">Всего: {totalText}</div>
+          <div className="meta meta-inline">Активных: {activeText} / Всего: {totalText}</div>
         </div>
 
         <div className="summary-card">
           <div className="title">Обращения в поддержку</div>
-          <div className="meta">Активных: {activeSupportText}</div>
-          <div className="meta">Всего: {totalSupportText}</div>
+          <div className="meta meta-inline">Активных: {activeSupportText} / Всего: {totalSupportText}</div>
+        </div>
+
+        <div className="summary-card invoice-card">
+          <div className="title">Счета</div>
+          <div className="meta meta-inline">
+            К оплате: {invoicesToPay.length} / Всего: {invoicesAll.length}
+          </div>
+          {invoicesToPay.length > 0 && (
+            <button className="btn-invoice" onClick={() => window.location.assign('/invoices/pay')}>
+              Оплатить
+            </button>
+          )}
         </div>
       </div>
 

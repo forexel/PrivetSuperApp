@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 import uuid
 from pydantic import BaseModel, HttpUrl
@@ -47,18 +47,28 @@ class DeviceRead(BaseModel):
     serial_number: str
     purchase_date: Optional[date] = None
     warranty_until: Optional[date] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class DevicePhotoRead(BaseModel):
+    id: uuid.UUID
+    file_url: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
 
 
 class DeviceDetail(DeviceRead):
-    # сюда позже можно добавить список фотографий
-    pass
+    photos: list[DevicePhotoRead] = []
 
 class DeviceListItem(BaseModel):
     id: uuid.UUID
     title: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

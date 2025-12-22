@@ -1,5 +1,6 @@
 import uuid
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import IntegrityError
 
 from app.models.devices import Device, DevicePhoto
@@ -17,7 +18,7 @@ class DeviceService(BaseService):
             raise ValueError("Serial number must be unique")
 
     async def get_by_id(self, device_id: uuid.UUID, user_id: uuid.UUID = None) -> Device | None:
-        query = select(Device).where(Device.id == device_id)
+        query = select(Device).where(Device.id == device_id).options(selectinload(Device.photos))
         if user_id:
             query = query.where(Device.user_id == user_id)
         return await self.db.scalar(query)
