@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../../shared/api'
-import { CloseFloating } from '../../shared/ui/CloseFloating'
 import { PLAN_TITLES, PERIOD_TITLES } from '../../shared/subscriptions'
 import '../../styles/forms.css'
 
@@ -41,8 +40,7 @@ export default function SubscriptionPayPage() {
     return (
       <div className="page-full page-blue">
         <div className="modal-wrap modal-wrap--wide">
-          <CloseFloating onClick={() => (window.history.length > 1 ? nav(-1) : nav('/', { replace: true }))} />
-          <div className="card auth-card" style={{ maxWidth: 360 }}>
+          <div className="card auth-card auth-card--center" style={{ maxWidth: 360 }}>
             <h1 className="card-title">Выбор тарифа</h1>
             <p className="success-text">Сначала выберите тариф.</p>
             <button className="btn btn-primary" onClick={() => nav('/subscriptions', { replace: true })}>
@@ -57,8 +55,7 @@ export default function SubscriptionPayPage() {
   return (
     <div className="page-full page-blue">
       <div className="modal-wrap modal-wrap--wide">
-        <CloseFloating onClick={() => (window.history.length > 1 ? nav(-1) : nav('/', { replace: true }))} />
-        <div className="card auth-card" style={{ maxWidth: 360 }}>
+        <div className="card auth-card auth-card--center" style={{ maxWidth: 360 }}>
           <h1 className="card-title">Процесс оплаты</h1>
           <p className="success-text">
             {PLAN_TITLES[plan]} • {PERIOD_TITLES[period]}

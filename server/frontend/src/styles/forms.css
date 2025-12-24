@@ -51,6 +51,18 @@
 }
 .btn.btn-secondary:disabled, .btn-secondary:disabled{ opacity:.6; cursor:default; }
 
+/* Центрирование контента для карточек оплаты */
+.auth-card--center{
+  text-align: center;
+}
+.auth-card--center .btn.btn-primary,
+.auth-card--center .btn.btn-secondary,
+.auth-card--center .btn-primary,
+.auth-card--center .btn-secondary{
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .auth-footer{
   display:flex; flex-direction:column; align-items:center;
   gap:14px; margin-top:12px; font-size:14px;
