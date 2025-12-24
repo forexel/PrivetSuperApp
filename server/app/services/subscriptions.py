@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict
 
 from sqlalchemy import select, update
@@ -31,13 +31,33 @@ class SubscriptionService:
         return PLANS
 
     async def get_active_for_user(self, user_id) -> Subscription | None:
+        now = datetime.now(timezone.utc)
+        # Deactivate expired subscriptions for the user.
+        await self.db.execute(
+            update(Subscription)
+            .where(Subscription.user_id == user_id)
+            .where(Subscription.active == True)  # noqa: E712
+            .where(Subscription.paid_until < now)
+            .values(active=False)
+        )
+
         stmt = (
             select(Subscription)
             .where(Subscription.user_id == user_id)
             .where(Subscription.active == True)  # noqa: E712
+            .where(Subscription.paid_until >= now)
             .order_by(Subscription.paid_until.desc())
         )
-        return await self.db.scalar(stmt)
+        sub = await self.db.scalar(stmt)
+
+        # Keep the fast flag in sync.
+        await self.db.execute(
+            update(User)
+            .where(User.id == user_id)
+            .values(has_subscription=bool(sub))
+        )
+        await self.db.commit()
+        return sub
 
     async def choose_plan(self, user: User, plan: str, period: str) -> Subscription:
         # deactivate previous active subscriptions
