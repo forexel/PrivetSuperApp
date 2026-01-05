@@ -1,3 +1,5 @@
+import { setAppStatus } from './appStatus'
+
 type HttpError = Error & { status?: number }
 
 // Base URL for API requests
@@ -45,7 +47,17 @@ async function request<T>(url: string, init?: RequestInit, _retried = false): Pr
   if (token) headers.Authorization = `Bearer ${token}`
 
   const finalUrl = joinUrl(url)
-  const res = await fetch(finalUrl, { ...init, headers: { ...headers, ...(init?.headers as any) } })
+  let res: Response
+  try {
+    res = await fetch(finalUrl, { ...init, headers: { ...headers, ...(init?.headers as any) } })
+  } catch (error) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setAppStatus('offline')
+    } else {
+      setAppStatus('server')
+    }
+    throw error
+  }
   if (res.status === 401 && !_retried) {
     const refreshed = await tryRefreshToken()
     if (refreshed) {
@@ -60,10 +72,19 @@ async function request<T>(url: string, init?: RequestInit, _retried = false): Pr
   if (!res.ok) {
     const err: HttpError = new Error(`HTTP ${res.status}`)
     err.status = res.status
+    if (res.status >= 500) {
+      setAppStatus('server')
+    }
     throw err
   }
   const text = await res.text()
-  return (text ? JSON.parse(text) : null) as T
+  if (!text) return null as T
+  try {
+    return JSON.parse(text) as T
+  } catch (error) {
+    setAppStatus('server')
+    throw error
+  }
 }
 
 export const api = {

@@ -27,13 +27,16 @@ class SupportCaseOut(BaseModel):
         from_attributes = True
 
 class SupportCaseMessageCreate(BaseModel):
-    body: str = Field(min_length=1, max_length=5000)
+    body: str | None = Field(None, max_length=5000)
+    file_key: str | None = None
 
 class SupportCaseMessageOut(BaseModel):
     id: uuid.UUID
     ticket_id: uuid.UUID
     author: MessageAuthor
-    body: str
+    body: str | None
+    file_key: str | None = None
+    file_url: str | None = None
     created_at: datetime
     class Config:
         from_attributes = True

@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     DATABASE_URL: AnyUrl = "postgresql+psycopg://privet:privet@localhost:5432/privetdb"
     JWT_SECRET: str = "change_me"
     S3_ENDPOINT: str = "http://localhost:9000"
+    S3_PUBLIC_ENDPOINT: str | None = None
     S3_ACCESS_KEY: str = "minioadmin"
     S3_SECRET_KEY: str = "minioadmin"
     S3_BUCKET: str = "privet-bucket"

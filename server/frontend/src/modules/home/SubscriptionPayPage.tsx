@@ -40,7 +40,7 @@ export default function SubscriptionPayPage() {
     return (
       <div className="page-full page-blue">
         <div className="modal-wrap modal-wrap--wide">
-          <div className="card auth-card auth-card--center" style={{ maxWidth: 360 }}>
+          <div className="card auth-card auth-card--center">
             <h1 className="card-title">Выбор тарифа</h1>
             <p className="success-text">Сначала выберите тариф.</p>
             <button className="btn btn-primary" onClick={() => nav('/subscriptions', { replace: true })}>
@@ -55,7 +55,7 @@ export default function SubscriptionPayPage() {
   return (
     <div className="page-full page-blue">
       <div className="modal-wrap modal-wrap--wide">
-        <div className="card auth-card auth-card--center" style={{ maxWidth: 360 }}>
+        <div className="card auth-card auth-card--center">
           <h1 className="card-title">Процесс оплаты</h1>
           <p className="success-text">
             {PLAN_TITLES[plan]} • {PERIOD_TITLES[period]}

@@ -14,6 +14,11 @@ class TicketStatus(str, Enum):
     reject = "reject"
 
 
+class RequestMessageAuthor(str, Enum):
+    user = "user"
+    master = "master"
+
+
 class TicketCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     description: Optional[str] = Field(None, max_length=5000)
@@ -58,3 +63,19 @@ class TicketDetail(TicketRead):
     # simplified presentation fields
     attachment_urls: List[str] = []
     status_history: List[dict] = []  # service may map ORM -> dicts
+    work_report: dict | None = None
+    master_name: Optional[str] = None
+
+
+class RequestMessageCreate(BaseModel):
+    body: Optional[str] = None
+    file_key: Optional[str] = None
+
+
+class RequestMessageRead(BaseModel):
+    id: UUID
+    author: RequestMessageAuthor
+    body: Optional[str] = None
+    file_key: Optional[str] = None
+    file_url: Optional[str] = None
+    created_at: datetime

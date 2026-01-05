@@ -28,7 +28,6 @@ class Ticket(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
-    device_id = Column(UUID(as_uuid=True), ForeignKey("devices.id", ondelete="SET NULL"), nullable=True)
 
     title = Column(Text, nullable=False)
     description = Column(Text, nullable=True)

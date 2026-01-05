@@ -6,7 +6,7 @@ export default function SubscriptionDenied() {
   return (
     <div className="page-full page-blue">
       <div className="modal-wrap modal-wrap--wide">
-        <div className="card auth-card auth-card--center" style={{ maxWidth: 360 }}>
+        <div className="card auth-card auth-card--center">
           <h1 className="card-title">Оплата не прошла</h1>
           <p style={{textAlign:'center', margin:'8px 0 16px'}}>
             Попробуйте ещё раз или выберите другой способ.

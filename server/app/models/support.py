@@ -34,7 +34,8 @@ class SupportCaseMessage(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     ticket_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("support_tickets.id", ondelete="CASCADE"), index=True, nullable=False)
     author: Mapped[MessageAuthor] = mapped_column(SAEnum(MessageAuthor), nullable=False)
-    body: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str | None] = mapped_column(Text, nullable=True)
+    file_key: Mapped[str | None] = mapped_column(String(512), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     case: Mapped[SupportCase] = relationship("SupportCase", back_populates="messages")

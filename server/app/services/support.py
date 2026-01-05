@@ -37,7 +37,7 @@ class SupportService(BaseService):
         return list(res.scalars())
 
     async def add_message(self, ticket_id: uuid.UUID, author: MessageAuthor, data: SupportMessageCreate) -> SupportMessage:
-        msg = SupportMessage(ticket_id=ticket_id, author=author, body=data.body)
+        msg = SupportMessage(ticket_id=ticket_id, author=author, body=data.body, file_key=data.file_key)
         self.db.add(msg)
         await self.db.commit()
         await self.db.refresh(msg)

@@ -6,7 +6,7 @@ export default function InvoicePaySuccessPage() {
   return (
     <div className="page-full page-blue">
       <div className="modal-wrap modal-wrap--wide">
-        <div className="card auth-card auth-card--center" style={{ maxWidth: 360 }}>
+        <div className="card auth-card auth-card--center">
           <h1 className="card-title">Счёт оплачен</h1>
           <p className="success-text">Оплата прошла успешно. Счета исчезли из списка.</p>
           <button className="btn btn-primary" onClick={() => nav('/', { replace: true })}>

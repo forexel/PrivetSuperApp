@@ -30,11 +30,22 @@ class TicketService:
         result = await self.db.execute(stmt)
         return result.scalars().first()
 
+    async def get_work_report(self, ticket_id: uuid.UUID):
+        from app.models.ticket_reports import TicketWorkReport  # type: ignore
+        stmt = (
+            select(TicketWorkReport)
+            .where(TicketWorkReport.ticket_id == ticket_id)
+            .options(selectinload(TicketWorkReport.photos))
+            .order_by(TicketWorkReport.created_at.desc())
+        )
+        result = await self.db.execute(stmt)
+        return result.scalars().first()
+
     async def create(self, user_id: uuid.UUID, payload):
         # Всегда создаём тикет со статусом 'new' в БД.
         norm_status = "new"
 
-        from app.models.tickets import Ticket  # type: ignore
+        from app.models.tickets import Ticket, TicketAttachment  # type: ignore
         ticket = Ticket(
             user_id=user_id,
             title=payload.title,
@@ -43,6 +54,11 @@ class TicketService:
         )
         self.db.add(ticket)
         await self.db.flush()
+        attachment_urls = getattr(payload, "attachment_urls", None) or []
+        for file_url in attachment_urls[:2]:
+            if not file_url:
+                continue
+            self.db.add(TicketAttachment(ticket_id=ticket.id, file_url=str(file_url)))
         from app.models.tickets import TicketStatusHistory, TicketStatus  # локальный импорт
 
         self.db.add(TicketStatusHistory(

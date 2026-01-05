@@ -19,6 +19,11 @@ class TicketStatus(str, Enum):
     REJECTED = "rejected"
 
 
+class RequestMessageAuthor(str, Enum):
+    USER = "user"
+    MASTER = "master"
+
+
 class ChangedBy(str, Enum):
     USER = "USER"
     STAFF = "STAFF"
@@ -30,7 +35,6 @@ class Ticket(Base):
 
     id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
     user_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    device_id: Mapped[Optional[UUID]] = mapped_column(PGUUID(as_uuid=True), ForeignKey("devices.id"), nullable=True)
 
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -47,9 +51,16 @@ class Ticket(Base):
         nullable=False,
             default=TicketStatus.NEW,
     )
+    assigned_master_id: Mapped[UUID | None] = mapped_column(
+        PGUUID(as_uuid=True),
+        ForeignKey("master_users.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    master_last_read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     # Relations
     attachments = relationship("TicketAttachment", back_populates="ticket", cascade="all, delete-orphan")
@@ -98,3 +109,22 @@ class TicketStatusHistory(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
     ticket = relationship("Ticket", back_populates="history")
+
+
+class RequestMessage(Base):
+    __tablename__ = "request_messages"
+
+    id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), primary_key=True, default=uuid4)
+    ticket_id: Mapped[UUID] = mapped_column(PGUUID(as_uuid=True), ForeignKey("tickets.id", ondelete="CASCADE"), nullable=False)
+    author: Mapped[RequestMessageAuthor] = mapped_column(
+        SQLEnum(
+            RequestMessageAuthor,
+            name="request_message_author_t",
+            create_type=False,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
+        nullable=False,
+    )
+    body: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    file_key: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)

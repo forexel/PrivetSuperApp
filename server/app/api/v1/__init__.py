@@ -12,6 +12,7 @@ from .invoices import router as invoices_router
 from .ping import router as ping_router
 from .users import router as users_router, auth_router as users_auth_router
 from .misc import router as misc_router
+from .uploads import router as uploads_router
 
 api_router = APIRouter()
 api_router.include_router(ping_router)           # /ping
@@ -26,3 +27,4 @@ api_router.include_router(admin_router)          # /admin
 api_router.include_router(support_router)  # /support
 api_router.include_router(users_router)    
 api_router.include_router(invoices_router)
+api_router.include_router(uploads_router)

@@ -9,6 +9,7 @@ from app.core.deps import get_db, get_current_user
 from app.models.users import User
 from app.models.support import SupportTicket, SupportCaseStatus as S
 from app.services.support import SupportService
+from app.services.storage import storage_service
 from app.schemas.support import (
     SupportTicketCreate,
     SupportTicketOut,
@@ -59,7 +60,19 @@ async def list_messages(
     ticket = await SupportService(db).get_ticket(ticket_id)
     if not ticket or ticket.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return await SupportService(db).list_messages(ticket_id)
+    messages = await SupportService(db).list_messages(ticket_id)
+    return [
+        SupportMessageOut(
+            id=msg.id,
+            ticket_id=msg.ticket_id,
+            author=msg.author,
+            body=msg.body,
+            file_key=getattr(msg, "file_key", None),
+            file_url=storage_service.generate_presigned_get_url(msg.file_key) if getattr(msg, "file_key", None) else None,
+            created_at=msg.created_at,
+        )
+        for msg in messages
+    ]
 
 @router.post("/{ticket_id}/messages/user", response_model=SupportMessageOut, status_code=status.HTTP_201_CREATED)
 async def add_user_message(
@@ -71,7 +84,18 @@ async def add_user_message(
     ticket = await SupportService(db).get_ticket(ticket_id)
     if not ticket or ticket.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
-    return await SupportService(db).add_message(ticket_id, MessageAuthor.user, payload)
+    if not payload.body and not payload.file_key:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message is empty")
+    msg = await SupportService(db).add_message(ticket_id, MessageAuthor.user, payload)
+    return SupportMessageOut(
+        id=msg.id,
+        ticket_id=msg.ticket_id,
+        author=msg.author,
+        body=msg.body,
+        file_key=getattr(msg, "file_key", None),
+        file_url=storage_service.generate_presigned_get_url(msg.file_key) if getattr(msg, "file_key", None) else None,
+        created_at=msg.created_at,
+    )
 
 @router.post("/{ticket_id}/messages/support", response_model=SupportMessageOut, status_code=status.HTTP_201_CREATED)
 async def add_support_message(
@@ -82,7 +106,18 @@ async def add_support_message(
 ):
     if not getattr(current_user, "is_admin", False) and getattr(current_user, "role", None) != "admin":
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only")
-    return await SupportService(db).add_message(ticket_id, MessageAuthor.support, payload)
+    if not payload.body and not payload.file_key:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message is empty")
+    msg = await SupportService(db).add_message(ticket_id, MessageAuthor.support, payload)
+    return SupportMessageOut(
+        id=msg.id,
+        ticket_id=msg.ticket_id,
+        author=msg.author,
+        body=msg.body,
+        file_key=getattr(msg, "file_key", None),
+        file_url=storage_service.generate_presigned_get_url(msg.file_key) if getattr(msg, "file_key", None) else None,
+        created_at=msg.created_at,
+    )
 
 @router.get("/meta")
 async def support_meta(current_user: Annotated[User, Depends(get_current_user)],

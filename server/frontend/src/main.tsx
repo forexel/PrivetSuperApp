@@ -10,6 +10,7 @@ import TicketsListPage from './modules/tickets/TicketsListPage'
 import { TicketCreatePage } from './modules/tickets/TicketCreatePage'
 import TicketSuccessPage from './modules/tickets/TicketSuccessPage'
 import TicketDetailPage from './modules/tickets/TicketDetailPage'
+import TicketChatPage from './modules/tickets/TicketChatPage'
 import { HomePage } from './modules/home/HomePage'
 import { ForgotPasswordPage } from './modules/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from './modules/auth/ResetPasswordPage'
@@ -26,6 +27,7 @@ import './index.css'
 import './styles/style.css'
 import './styles/forms.css'
 import './styles/dashboard.css'
+import { AppStatusOverlay } from './shared/ui/AppStatusOverlay'
 import SubscriptionPage from './modules/home/SubscriptionPage'
 import SubscriptionSuccess from './modules/home/SubscritionSuccsess'
 import SubscriptionDenied from './modules/home/SubscritionDenied'
@@ -83,6 +85,7 @@ const router = createBrowserRouter([
       { path: 'tickets/new', element: <TicketCreatePage /> },     // форма (фулл-скрин)
       { path: 'tickets/success', element: <TicketSuccessPage />}, // успех (фулл-скрин)
       { path: 'tickets/:id', element: <TicketDetailPage /> },     // подробности + чат
+      { path: 'tickets/:id/chat', element: <TicketChatPage /> },  // чат по заявке
       { path: 'subscriptions', element: <SubscriptionPage /> },
       { path: 'subscriptions/pay', element: <SubscriptionPayPage /> },
       { path: 'subscriptions/success', element: <SubscriptionSuccess /> },
@@ -121,6 +124,7 @@ window.addEventListener('orientationchange', () => setTimeout(applyViewportInset
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <QueryClientProvider client={qc}>
+    <AppStatusOverlay />
     <RouterProvider router={router} />
   </QueryClientProvider>,
 )
