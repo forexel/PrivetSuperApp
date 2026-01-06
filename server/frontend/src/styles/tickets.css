@@ -347,12 +347,14 @@
   background: transparent;
   border: none;
   font-size: 22px;
-  color: #d1d5db;
+  color: transparent;
+  -webkit-text-stroke: 1.5px #EDE15E;
   cursor: pointer;
 }
 
 .rating-star--active {
-  color: #111827;
+  color: #EDE15E;
+  -webkit-text-stroke: 0;
 }
 
 .rating-label {

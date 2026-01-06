@@ -16,6 +16,8 @@ type TicketDetail = {
   status: 'new'|'in_progress'|'completed'|'reject'
   status_history: HistoryItem[]
   attachment_urls?: string[]
+  master_name?: string | null
+  master_phone?: string | null
   work_report?: {
     summary: string
     details: string
@@ -134,6 +136,13 @@ export default function TicketDetailPage() {
           <span className={`status-badge status-${data.status}`}>{statusLabels[data.status]}</span>
         </div>
         <div className="detail-updated">обновлено {formatDate(updated)}</div>
+        {data.master_name || data.master_phone ? (
+          <div className="detail-section">
+            <div className="detail-section-title">Исполнитель</div>
+            {data.master_name ? <div className="detail-desc">{data.master_name}</div> : null}
+            {data.master_phone ? <div className="detail-desc">{data.master_phone}</div> : null}
+          </div>
+        ) : null}
 
         {/* Подробное описание */}
         {data.description ? (
@@ -155,9 +164,6 @@ export default function TicketDetailPage() {
 
         {data.status === 'completed' && data.work_report ? (
           <div className="detail-section report-actions">
-            <button className="btn btn-secondary report-btn" onClick={() => setShowReport(true)}>
-              Отчет
-            </button>
             <div className={`report-rating ${ratingStars ? 'report-rating--locked' : ''}`}>
               {Array.from({ length: 5 }).map((_, idx) => (
                 <button
@@ -176,6 +182,9 @@ export default function TicketDetailPage() {
                 </button>
               ))}
             </div>
+            <button className="btn btn-secondary report-btn" onClick={() => setShowReport(true)}>
+              Отчет
+            </button>
           </div>
         ) : null}
       </div>
