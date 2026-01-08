@@ -46,15 +46,19 @@ async function request<T>(url: string, init?: RequestInit, _retried = false): Pr
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers.Authorization = `Bearer ${token}`
 
+  const method = String(init?.method || 'GET').toUpperCase()
+  const allowGlobalStatus = method === 'GET'
   const finalUrl = joinUrl(url)
   let res: Response
   try {
     res = await fetch(finalUrl, { ...init, headers: { ...headers, ...(init?.headers as any) } })
   } catch (error) {
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      setAppStatus('offline')
-    } else {
-      setAppStatus('server')
+    if (allowGlobalStatus) {
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        setAppStatus('offline')
+      } else {
+        setAppStatus('server')
+      }
     }
     throw error
   }
@@ -72,7 +76,7 @@ async function request<T>(url: string, init?: RequestInit, _retried = false): Pr
   if (!res.ok) {
     const err: HttpError = new Error(`HTTP ${res.status}`)
     err.status = res.status
-    if (res.status >= 500) {
+    if (allowGlobalStatus && res.status >= 500) {
       setAppStatus('server')
     }
     throw err
@@ -82,7 +86,9 @@ async function request<T>(url: string, init?: RequestInit, _retried = false): Pr
   try {
     return JSON.parse(text) as T
   } catch (error) {
-    setAppStatus('server')
+    if (allowGlobalStatus) {
+      setAppStatus('server')
+    }
     throw error
   }
 }
