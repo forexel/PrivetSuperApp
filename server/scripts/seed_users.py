@@ -21,7 +21,8 @@ DOMAINS = ["gmail.ru", "mail.ru", "yandex.ru"]
 PREFIXES = ["985", "977", "903"]
 
 
-COUNT = 473
+COUNT = int(__import__("os").getenv("SEED_COUNT", "473"))
+START_OFFSET = int(__import__("os").getenv("SEED_OFFSET", "0"))
 PASSWORD = "12345678"
 
 
@@ -52,7 +53,8 @@ async def main() -> None:
     async with async_session_maker() as session:
         service = UserService(session)
         created = 0
-        for i in range(COUNT):
+        for idx in range(COUNT):
+            i = START_OFFSET + idx
             name = make_name(i)
             phone = make_phone(i)
             email = make_email(i, name)
@@ -68,8 +70,8 @@ async def main() -> None:
                 created += 1
             except Exception as exc:
                 print(f"skip {phone} {email}: {exc}")
-            if (i + 1) % 50 == 0:
-                print(f"progress: {i + 1}/{COUNT}")
+            if (idx + 1) % 50 == 0:
+                print(f"progress: {idx + 1}/{COUNT}")
         print(f"done: {created}/{COUNT}")
 
 
