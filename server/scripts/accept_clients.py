@@ -29,9 +29,6 @@ async def main() -> None:
             text("SELECT id, name, base_fee, extra_per_device FROM manager_tariffs")
         )
         tariff_rows = list(tariffs.mappings())
-        if not tariff_rows:
-            print("No manager_tariffs found. Aborting.")
-            return
 
         clients = await session.execute(text("SELECT id, user_id FROM manager_clients ORDER BY created_at ASC"))
         client_rows = list(clients.mappings())
@@ -44,14 +41,32 @@ async def main() -> None:
             client_id = str(row["id"])
             user_id = str(row["user_id"])
             manager_id = str(managers[idx % len(managers)]) if managers else None
-            tariff = random.choice(tariff_rows)
-
-            tariff_snapshot = {
-                "id": str(tariff["id"]),
-                "name": tariff["name"],
-                "base_fee": str(tariff["base_fee"]),
-                "extra_per_device": str(tariff["extra_per_device"]),
-            }
+            tariff = random.choice(tariff_rows) if tariff_rows else None
+            if tariff:
+                tariff_snapshot = {
+                    "id": str(tariff["id"]),
+                    "name": tariff["name"],
+                    "base_fee": str(tariff["base_fee"]),
+                    "extra_per_device": str(tariff["extra_per_device"]),
+                }
+            else:
+                ut = await session.execute(
+                    text(
+                        """
+                        SELECT tariff_id, device_count, total_extra_fee
+                        FROM user_tariffs
+                        WHERE client_id = :client_id
+                        """
+                    ),
+                    {"client_id": client_id},
+                )
+                ut_row = ut.mappings().first()
+                tariff_snapshot = {
+                    "tariff_id": str(ut_row["tariff_id"]) if ut_row and ut_row["tariff_id"] else None,
+                    "device_count": int(ut_row["device_count"]) if ut_row else 0,
+                    "total_extra_fee": str(ut_row["total_extra_fee"]) if ut_row else "0",
+                    "placeholder": True,
+                }
             passport_snapshot = {"placeholder": True}
             device_snapshot = {"placeholder": True}
 
@@ -75,25 +90,26 @@ async def main() -> None:
                 {"manager_id": manager_id, "client_id": client_id},
             )
 
-            await session.execute(
-                text(
-                    """
-                    INSERT INTO user_tariffs
-                        (id, client_id, tariff_id, device_count, total_extra_fee, calculated_at, created_at, updated_at)
-                    VALUES
-                        (:id, :client_id, :tariff_id, 0, 0, now(), now(), now())
-                    ON CONFLICT (client_id) DO UPDATE SET
-                        tariff_id = EXCLUDED.tariff_id,
-                        calculated_at = now(),
-                        updated_at = now()
-                    """
-                ),
-                {
-                    "id": str(uuid.uuid4()),
-                    "client_id": client_id,
-                    "tariff_id": str(tariff["id"]),
-                },
-            )
+            if tariff:
+                await session.execute(
+                    text(
+                        """
+                        INSERT INTO user_tariffs
+                            (id, client_id, tariff_id, device_count, total_extra_fee, calculated_at, created_at, updated_at)
+                        VALUES
+                            (:id, :client_id, :tariff_id, 0, 0, now(), now(), now())
+                        ON CONFLICT (client_id) DO UPDATE SET
+                            tariff_id = EXCLUDED.tariff_id,
+                            calculated_at = now(),
+                            updated_at = now()
+                        """
+                    ),
+                    {
+                        "id": str(uuid.uuid4()),
+                        "client_id": client_id,
+                        "tariff_id": str(tariff["id"]),
+                    },
+                )
 
             await session.execute(
                 text(
