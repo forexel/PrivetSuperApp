@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../../shared/api'
-import { setAppStatus } from '../../shared/appStatus'
 import ClipIcon from '../../assets/icons/clip.svg?react'
 import '../../styles/tickets.css'
 import '../../styles/forms.css'
@@ -94,11 +93,9 @@ export default function SupportDetailPage() {
     try {
       res = await send(token)
     } catch (error) {
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        setAppStatus('offline')
-      } else {
-        setAppStatus('server')
-      }
+      setErr(typeof navigator !== 'undefined' && !navigator.onLine
+        ? 'Нет соединения с интернетом'
+        : 'Не удалось загрузить файл')
       throw error
     }
     if (res.status === 401) {
@@ -118,11 +115,9 @@ export default function SupportDetailPage() {
             try {
               res = await send(token)
             } catch (error) {
-              if (typeof navigator !== 'undefined' && !navigator.onLine) {
-                setAppStatus('offline')
-              } else {
-                setAppStatus('server')
-              }
+              setErr(typeof navigator !== 'undefined' && !navigator.onLine
+                ? 'Нет соединения с интернетом'
+                : 'Не удалось загрузить файл')
               throw error
             }
           }
@@ -130,7 +125,7 @@ export default function SupportDetailPage() {
       }
     }
     if (!res.ok) {
-      if (res.status >= 500) setAppStatus('server')
+      setErr('Не удалось загрузить файл')
       throw new Error('upload failed')
     }
     const json = await res.json()
@@ -141,6 +136,8 @@ export default function SupportDetailPage() {
     try {
       const key = await uploadPhoto(file)
       await sendMutation.mutateAsync({ file_key: key })
+    } catch {
+      setErr((prev) => prev || 'Не удалось отправить сообщение')
     } finally {
       setAttachBusy(false)
     }
