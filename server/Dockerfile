@@ -50,6 +50,7 @@ RUN pip install --no-cache-dir --upgrade pip \
 
 COPY app ./app
 COPY alembic ./alembic
+COPY scripts ./scripts
 COPY alembic.ini ./
 COPY pyproject.toml ./
 
