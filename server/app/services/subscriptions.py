@@ -15,7 +15,7 @@ from app.models.users import User
 
 PRICES_RUB: Dict[str, Dict[str, Decimal]] = {
     TariffPeriod.MONTH.value: {
-        TariffPlan.SIMPLE.value: Decimal("3999"),
+        TariffPlan.SIMPLE.value: Decimal("1"),
         TariffPlan.MEDIUM.value: Decimal("7999"),
         TariffPlan.PREMIUM.value: Decimal("13999"),
     },
