@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import List, Dict
+from decimal import Decimal
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,14 +13,28 @@ from app.models.subscriptions import Subscription, TariffPlan, TariffPeriod
 from app.models.users import User
 
 
+PRICES_RUB: Dict[str, Dict[str, Decimal]] = {
+    TariffPeriod.MONTH.value: {
+        TariffPlan.SIMPLE.value: Decimal("3999"),
+        TariffPlan.MEDIUM.value: Decimal("7999"),
+        TariffPlan.PREMIUM.value: Decimal("13999"),
+    },
+    TariffPeriod.YEAR.value: {
+        TariffPlan.SIMPLE.value: Decimal("39990"),
+        TariffPlan.MEDIUM.value: Decimal("79990"),
+        TariffPlan.PREMIUM.value: Decimal("139990"),
+    },
+}
+
 # Static catalogue for Swagger/demo purposes
 PLANS: List[Dict] = [
-    {"plan": TariffPlan.SIMPLE.value, "period": TariffPeriod.MONTH.value, "price_rub": 199},
-    {"plan": TariffPlan.SIMPLE.value, "period": TariffPeriod.YEAR.value, "price_rub": 1990},
-    {"plan": TariffPlan.MEDIUM.value, "period": TariffPeriod.MONTH.value, "price_rub": 399},
-    {"plan": TariffPlan.MEDIUM.value, "period": TariffPeriod.YEAR.value, "price_rub": 3990},
-    {"plan": TariffPlan.PREMIUM.value, "period": TariffPeriod.MONTH.value, "price_rub": 799},
-    {"plan": TariffPlan.PREMIUM.value, "period": TariffPeriod.YEAR.value, "price_rub": 7990},
+    {
+        "plan": plan,
+        "period": period,
+        "price_rub": int(price),
+    }
+    for period, items in PRICES_RUB.items()
+    for plan, price in items.items()
 ]
 
 
@@ -29,6 +44,13 @@ class SubscriptionService:
 
     async def list_plans(self) -> List[Dict]:
         return PLANS
+
+    @staticmethod
+    def get_price(plan: str, period: str) -> Decimal:
+        try:
+            return PRICES_RUB[period][plan]
+        except KeyError as exc:
+            raise ValueError("unknown plan or period") from exc
 
     async def get_active_for_user(self, user_id) -> Subscription | None:
         now = datetime.now(timezone.utc)

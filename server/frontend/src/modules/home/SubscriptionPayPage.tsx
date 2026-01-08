@@ -23,12 +23,16 @@ export default function SubscriptionPayPage() {
     return PRICES[period][plan]
   }, [plan, period])
 
-  const onSuccess = async () => {
+  const onPay = async () => {
     if (!plan || !period) return
     try {
       setBusy(true)
-      await api.post('/subscriptions/create', { plan, period })
-      nav('/subscriptions/success', { replace: true })
+      const resp = await api.post<{ redirect_url: string }>('/payments/yookassa/subscription', { plan, period })
+      if (resp?.redirect_url) {
+        window.location.assign(resp.redirect_url)
+        return
+      }
+      throw new Error('redirect_url missing')
     } catch {
       nav('/subscriptions/denied', { replace: true })
     } finally {
@@ -61,11 +65,8 @@ export default function SubscriptionPayPage() {
             {PLAN_TITLES[plan]} • {PERIOD_TITLES[period]}
           </p>
           <p className="success-text">К оплате: {amount.toLocaleString('ru-RU')} ₽</p>
-          <button className="btn btn-primary" onClick={onSuccess} disabled={busy}>
-            Успешная оплата
-          </button>
-          <button className="btn btn-secondary" onClick={() => nav('/subscriptions/denied', { replace: true })} disabled={busy}>
-            Неуспешная оплата
+          <button className="btn btn-primary" onClick={onPay} disabled={busy}>
+            Перейти к оплате
           </button>
         </div>
       </div>

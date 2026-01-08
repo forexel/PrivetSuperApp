@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Привет Супер</string>
+    <string name="title_activity_main">Привет Супер</string>
+    <string name="package_name">ru.privetsuper.app</string>
+    <string name="custom_url_scheme">ru.privetsuper.app</string>
+</resources>

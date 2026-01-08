@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { api } from '../../shared/api'
 import '../../styles/invoices.css'
 import '../../styles/forms.css'
@@ -16,7 +16,6 @@ type Invoice = {
 
 export default function InvoicePayPage() {
   const nav = useNavigate()
-  const qc = useQueryClient()
   const [selected, setSelected] = useState<string[]>([])
   const [initialized, setInitialized] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -43,23 +42,23 @@ export default function InvoicePayPage() {
     setSelected((prev) => (prev.includes(id) ? prev.filter((v) => v !== id) : [...prev, id]))
   }
 
-  const onSuccess = async () => {
+  const onPay = async () => {
     if (!selected.length) return
     try {
       setBusy(true)
-      await api.post('/invoices/pay', { invoice_ids: selected, success: true })
-      qc.invalidateQueries({ queryKey: ['invoices'] })
-      nav('/invoices/success', { replace: true })
+      const resp = await api.post<{ redirect_url: string }>('/payments/yookassa/invoices', {
+        invoice_ids: selected,
+      })
+      if (resp?.redirect_url) {
+        window.location.assign(resp.redirect_url)
+        return
+      }
+      throw new Error('redirect_url missing')
     } catch {
       nav('/invoices/denied', { replace: true })
     } finally {
       setBusy(false)
     }
-  }
-
-  const onFail = () => {
-    if (!selected.length) return
-    nav('/invoices/denied', { replace: true })
   }
 
   return (
@@ -105,11 +104,8 @@ export default function InvoicePayPage() {
             </>
           )}
 
-          <button className="btn btn-primary" onClick={onSuccess} disabled={!selected.length || busy}>
-            Успешная оплата
-          </button>
-          <button className="btn btn-secondary" onClick={onFail} disabled={!selected.length || busy}>
-            Неуспешная оплата
+          <button className="btn btn-primary" onClick={onPay} disabled={!selected.length || busy}>
+            Перейти к оплате
           </button>
         </div>
       </div>

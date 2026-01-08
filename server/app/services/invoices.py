@@ -28,6 +28,23 @@ class InvoiceService(BaseService):
         res = await self.db.execute(stmt)
         return list(res.scalars())
 
+    async def get_payable_invoices(
+        self,
+        user_id: uuid.UUID,
+        invoice_ids: list[uuid.UUID],
+    ) -> Sequence[ManagerInvoice]:
+        if not invoice_ids:
+            return []
+        now = datetime.now(timezone.utc)
+        stmt = select(ManagerInvoice).where(
+            ManagerInvoice.client_id == user_id,
+            ManagerInvoice.id.in_(invoice_ids),
+            or_(ManagerInvoice.due_date.is_(None), ManagerInvoice.due_date >= now),
+            ManagerInvoice.status != InvoiceStatus.paid,
+        )
+        res = await self.db.execute(stmt)
+        return list(res.scalars())
+
     async def pay_invoices(
         self,
         user_id: uuid.UUID,

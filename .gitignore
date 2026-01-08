@@ -2,3 +2,33 @@
 # local env files
 .env
 .DS_Store
+
+# node/npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# builds
+dist/
+build/
+.cache/
+
+# mobile/android artifacts
+mobile/android/build/
+mobile/android/.gradle/
+mobile/android/.idea/
+mobile/.idea/
+mobile/.icon_tmp/
+mobile/pepk*.zip
+mobile/pepk*.jar
+mobile/**/pepk*.zip
+mobile/**/pepk*.jar
+
+# secrets/keys
+*.jks
+*.jks.bak*
+*.keystore
+*.keystore.bak*
+*.pem

@@ -7,3 +7,13 @@
 .app-status-screen{
   min-height: 100dvh;
 }
+
+.app-status-screen .auth-card{
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.app-status-screen .success-actions{
+  margin-top: auto;
+}

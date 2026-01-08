@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     APP_VERSION: str | None = None
     APP_CHANNEL: str | None = None  # web | pwa | apk | ipa
 
+    # YooKassa (merchant) integration
+    YOOKASSA_SHOP_ID: str | None = None
+    YOOKASSA_SECRET_KEY: str | None = None
+    YOOKASSA_WEBHOOK_SECRET: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
