@@ -5,7 +5,7 @@ import { PLAN_TITLES, PERIOD_TITLES } from '../../shared/subscriptions'
 import '../../styles/forms.css'
 
 const PRICES = {
-  month: { simple: 1, medium: 7999, premium: 13999 },
+  month: { simple: 3999, medium: 7999, premium: 13999 },
   year: { simple: 39990, medium: 79990, premium: 139990 },
 }
 

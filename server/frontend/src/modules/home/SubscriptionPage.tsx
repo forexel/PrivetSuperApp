@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const PRICES = {
-  month: { simple: 1,  medium: 7999,  premium: 13999 },
+  month: { simple: 3999,  medium: 7999,  premium: 13999 },
   year:  { simple: 39990, medium: 79990, premium: 139990 },
 }
 
