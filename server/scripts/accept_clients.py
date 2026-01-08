@@ -119,7 +119,7 @@ async def main() -> None:
                          signed_at, payment_confirmed_at, contract_url, contract_number,
                          signed_ip, signed_user_agent, created_at, updated_at)
                     VALUES
-                        (:id, :client_id, :tariff_snapshot::json, :passport_snapshot::json, :device_snapshot::json,
+                        (:id, :client_id, CAST(:tariff_snapshot AS json), CAST(:passport_snapshot AS json), CAST(:device_snapshot AS json),
                          :signed_at, :payment_confirmed_at, :contract_url, :contract_number,
                          :signed_ip, :signed_user_agent, now(), now())
                     ON CONFLICT (client_id) DO UPDATE SET
