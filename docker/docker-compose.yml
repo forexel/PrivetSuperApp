@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     image: apps-privet_super_api
     container_name: apps-privet_super_api
+    env_file:
+      - ../server/.env
     environment:
       DATABASE_URL: postgresql+psycopg://privet:privet@infra-db:5432/privetdb
       JWT_SECRET: change_me_backend_secret
@@ -26,6 +28,8 @@ services:
       dockerfile: Dockerfile
     image: apps-privet_super_api
     container_name: apps-privet_super_migrator
+    env_file:
+      - ../server/.env
     environment:
       DATABASE_URL: postgresql+psycopg://privet:privet@infra-db:5432/privetdb
       JWT_SECRET: change_me_backend_secret
