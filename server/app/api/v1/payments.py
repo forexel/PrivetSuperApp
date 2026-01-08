@@ -44,12 +44,57 @@ def _format_amount(value: Decimal | str | float) -> str:
     return f"{amount:.2f}"
 
 
+def _normalize_phone(phone: str | None) -> str | None:
+    if not phone:
+        return None
+    cleaned = "".join(ch for ch in str(phone) if ch.isdigit() or ch == "+")
+    if cleaned.startswith("+"):
+        return cleaned
+    digits = "".join(ch for ch in cleaned if ch.isdigit())
+    if len(digits) == 10:
+        return f"+7{digits}"
+    if len(digits) == 11 and digits.startswith("7"):
+        return f"+{digits}"
+    return cleaned if cleaned else None
+
+
+def _build_receipt(
+    *,
+    amount: Decimal | str | float,
+    description: str,
+    customer_phone: str | None,
+    customer_email: str | None,
+) -> dict:
+    customer: dict[str, str] = {}
+    if customer_email:
+        customer["email"] = customer_email
+    phone = _normalize_phone(customer_phone)
+    if phone:
+        customer["phone"] = phone
+    receipt = {
+        "customer": customer,
+        "items": [
+            {
+                "description": description,
+                "quantity": "1",
+                "amount": {"value": _format_amount(amount), "currency": "RUB"},
+                "vat_code": 1,
+                "payment_mode": "full_payment",
+                "payment_subject": "service",
+            }
+        ],
+        "tax_system_code": 2,
+    }
+    return receipt
+
+
 async def _create_yookassa_payment(
     *,
     amount: Decimal | str | float,
     description: str,
     return_path: str,
     metadata: dict[str, str],
+    receipt: dict | None = None,
 ) -> str:
     _require_yookassa_config()
     idempotence_key = str(uuid.uuid4())
@@ -60,6 +105,8 @@ async def _create_yookassa_payment(
         "description": description,
         "metadata": metadata,
     }
+    if receipt:
+        payload["receipt"] = receipt
     async with httpx.AsyncClient(timeout=15) as client:
         resp = await client.post(
             YOOKASSA_API_URL,
@@ -107,6 +154,12 @@ async def create_invoice_payment(
         raise HTTPException(status_code=400, detail="Some invoices are not available for payment")
 
     total = sum(Decimal(str(inv.amount)) for inv in invoices)
+    receipt = _build_receipt(
+        amount=total,
+        description="Invoice payment",
+        customer_phone=current_user.phone,
+        customer_email=current_user.email,
+    )
     confirmation_url = await _create_yookassa_payment(
         amount=total,
         description="Invoice payment",
@@ -116,6 +169,7 @@ async def create_invoice_payment(
             "user_id": str(current_user.id),
             "invoice_ids": ",".join(str(inv.id) for inv in invoices),
         },
+        receipt=receipt,
     )
     return PaymentRedirectResponse(redirect_url=confirmation_url)
 
@@ -131,6 +185,12 @@ async def create_subscription_payment(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail="Unknown plan or period") from exc
 
+    receipt = _build_receipt(
+        amount=price,
+        description=f"Subscription {payload.plan}/{payload.period}",
+        customer_phone=current_user.phone,
+        customer_email=current_user.email,
+    )
     confirmation_url = await _create_yookassa_payment(
         amount=price,
         description=f"Subscription {payload.plan}/{payload.period}",
@@ -141,6 +201,7 @@ async def create_subscription_payment(
             "plan": payload.plan,
             "period": payload.period,
         },
+        receipt=receipt,
     )
     return PaymentRedirectResponse(redirect_url=confirmation_url)
 
